@@ -90,7 +90,8 @@ export class MongoStore<T extends { id: string }> {
   seed(items: T[]): void {
     if (this.items.size === 0) {
       items.forEach(item => this.items.set(item.id, item));
-      this.collection.insertMany(items as any[])
+      // Spread each item to avoid insertMany mutating originals with _id
+      this.collection.insertMany(items.map(i => ({ ...i })) as any[])
         .catch(err => console.error(`[MongoStore:${this.name}] seed error:`, err));
     }
   }
