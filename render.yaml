@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: appcharge-webstore-demo
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: APPCHARGE_API_KEY
+        sync: false
+      - key: APPCHARGE_PUBLISHER_TOKEN
+        sync: false
+      - key: APPCHARGE_WEBSTORE_URL
+        sync: false
+      - key: APPCHARGE_API_BASE
+        value: https://api-sandbox.appcharge.com
