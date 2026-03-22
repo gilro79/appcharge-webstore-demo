@@ -5,10 +5,12 @@ import { playerStore, tierStore } from '../../index.js';
 const router = Router();
 
 router.post('/', (req, res) => {
-  const { publisherPlayerId } = req.body as { publisherPlayerId: string };
+  const body = req.body as Record<string, unknown>;
+  // Appcharge sends the player ID as "playerId"
+  const publisherPlayerId = (body.playerId as string) || (body.publisherPlayerId as string);
 
   if (!publisherPlayerId) {
-    res.status(400).json({ error: 'Missing publisherPlayerId' });
+    res.status(400).json({ error: 'Missing playerId' });
     return;
   }
 
@@ -31,14 +33,14 @@ router.post('/', (req, res) => {
       let productsSequence;
 
       if (row.offerType === 'RollingOffer' && row.subOfferProducts) {
-        // Rolling offers: one sequence entry per sub-offer block
+        // Rolling offers: one sequence entry per sub-offer block, quantities as strings
         productsSequence = row.subOfferProducts.map((blockProducts, idx) => ({
           index: idx + 1,
           products: Object.entries(blockProducts)
             .filter(([, qty]) => qty > 0)
             .map(([productId, qty]) => ({
               publisherProductId: productId,
-              quantity: qty,
+              quantity: String(qty),
               priority: 'Main' as const,
             })),
         }));
@@ -59,7 +61,10 @@ router.post('/', (req, res) => {
         productsSequence,
       };
 
-      if (row.offerDesignId && row.offerDesignId !== 'Default') {
+      // Rolling offers use dynamicOfferUi; regular offers use offerDesignOverride
+      if (row.offerType === 'RollingOffer' && row.offerDesignId) {
+        offer.dynamicOfferUi = { offerDesignId: row.offerDesignId };
+      } else if (row.offerDesignId && row.offerDesignId !== 'Default') {
         offer.offerDesignOverride = { offerDesignId: row.offerDesignId };
       }
 
