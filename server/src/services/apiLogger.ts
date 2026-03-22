@@ -30,4 +30,13 @@ export function logOutboundCall(opts: {
 
   logStore.create(entry);
   sseManager.broadcast(entry);
+
+  // Keep only the 20 most recent logs in the DB
+  const all = logStore.getAll();
+  if (all.length > 20) {
+    const sorted = all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    for (const old of sorted.slice(20)) {
+      logStore.delete(old.id);
+    }
+  }
 }

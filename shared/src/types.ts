@@ -120,7 +120,7 @@ export interface AwardResponse {
 
 // ─── Events ───
 
-export type EventCategory = 'webstore' | 'payment';
+export type EventCategory = 'webstore' | 'order';
 
 export interface AppchargeEvent {
   id: string;
