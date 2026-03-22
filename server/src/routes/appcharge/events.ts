@@ -7,12 +7,9 @@ const router = Router();
 
 const MAX_EVENTS_PER_CATEGORY = 20;
 
-function categorizeEvent(type: string): EventCategory {
-  // Appcharge event types are prefixed: "order.*" or "webstore.*"
-  const lower = type.toLowerCase();
-  if (lower.startsWith('order.') || lower.startsWith('order_')) return 'order';
-  // Also catch payment-related keywords as order events
-  if (['charge', 'purchase', 'payment', 'refund', 'chargeback', 'transaction'].some((kw) => lower.includes(kw))) return 'order';
+function categorizeEvent(eventName: string): EventCategory {
+  const lower = eventName.toLowerCase();
+  if (lower.startsWith('order.')) return 'order';
   return 'webstore';
 }
 
@@ -31,7 +28,8 @@ function pruneCategory(category: EventCategory): void {
 
 router.post('/', (req, res) => {
   const body = req.body as Record<string, unknown>;
-  const type = (body.type as string) || 'unknown';
+  // Appcharge sends the event name as "eventName"
+  const type = (body.eventName as string) || (body.type as string) || 'unknown';
   const category = categorizeEvent(type);
 
   const event: AppchargeEvent = {
