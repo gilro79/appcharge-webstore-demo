@@ -14,20 +14,28 @@ router.post('/', (req, res) => {
 
   const player = playerStore.findBy((p) => p.publisherPlayerId === publisherPlayerId);
 
-  if (!player) {
-    res.json({ status: 'invalid' } as Partial<AuthResponse>);
+  // Known player — return their profile
+  if (player) {
+    const response: AuthResponse = {
+      status: 'valid',
+      publisherPlayerId: player.publisherPlayerId,
+      playerName: player.playerName,
+      playerProfileImage: player.playerProfileImage,
+      sessionMetadata: player.sessionMetadata,
+    };
+    res.json(response);
     return;
   }
 
-  const response: AuthResponse = {
+  // Unknown player — return a guest profile
+  const guestResponse: AuthResponse = {
     status: 'valid',
-    publisherPlayerId: player.publisherPlayerId,
-    playerName: player.playerName,
-    playerProfileImage: player.playerProfileImage,
-    sessionMetadata: player.sessionMetadata,
+    publisherPlayerId,
+    playerName: 'Guest',
+    playerProfileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest',
+    sessionMetadata: { guest: 'true' },
   };
-
-  res.json(response);
+  res.json(guestResponse);
 });
 
 export default router;

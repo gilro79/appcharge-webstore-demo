@@ -97,6 +97,24 @@ export async function syncFromAppcharge(): Promise<void> {
     const offerTypeMap = new Map(
       offersData.offers.map((o) => [o.publisherOfferId, (o.type || 'Bundle') as OfferType])
     );
+    const offerPriceMap = new Map(
+      offersData.offers.map((o) => {
+        const seq = (o as any).productsSequence;
+        const price = Array.isArray(seq) && seq.length > 0 ? seq[0].priceInUsdCents : undefined;
+        return [o.publisherOfferId, price as number | undefined];
+      })
+    );
+    // Rolling offer sub-offer data
+    const offerSubOfferMap = new Map<string, { count: number; prices: number[] }>(
+      offersData.offers
+        .filter((o) => o.type === 'RollingOffer')
+        .map((o) => {
+          const seq = (o as any).productsSequence as any[];
+          const count = Array.isArray(seq) ? seq.length : 0;
+          const prices = Array.isArray(seq) ? seq.map((s: any) => s.priceInUsdCents ?? 0) : [];
+          return [o.publisherOfferId, { count, prices }];
+        })
+    );
     const productIds = productsData.map((p) => p.publisherProductId);
 
     console.log(`[sync] Fetched ${offerIds.length} offers, ${productIds.length} products from Appcharge`);
@@ -111,26 +129,57 @@ export async function syncFromAppcharge(): Promise<void> {
       const updatedOffers: TierOfferRow[] = offerIds.map((offerId) => {
         const existing = existingOffers.get(offerId);
         const offerType = offerTypeMap.get(offerId) || 'Bundle';
+        const priceInUsdCents = offerPriceMap.get(offerId);
+        const subOfferData = offerSubOfferMap.get(offerId);
         if (existing) {
-          // Keep existing row, but ensure all product columns exist and update offerType
+          // Keep existing row, but ensure all product columns exist and update offerType/price
           const products: Record<string, number> = {};
           for (const pid of productIds) {
             products[pid] = existing.products[pid] ?? 0;
           }
-          return { ...existing, offerType, products };
+          const row: TierOfferRow = { ...existing, offerType, priceInUsdCents, products };
+          // Rolling offer sub-offer products
+          if (subOfferData) {
+            row.subOfferCount = subOfferData.count;
+            row.subOfferPrices = subOfferData.prices;
+            // Preserve existing sub-offer products or initialize empty
+            const existingSubs = existing.subOfferProducts || [];
+            row.subOfferProducts = Array.from({ length: subOfferData.count }, (_, idx) => {
+              const existingBlock = existingSubs[idx] || {};
+              const block: Record<string, number> = {};
+              for (const pid of productIds) {
+                block[pid] = existingBlock[pid] ?? 0;
+              }
+              return block;
+            });
+          }
+          return row;
         }
         // New offer — default to disabled with 0 quantities
         const products: Record<string, number> = {};
         for (const pid of productIds) {
           products[pid] = 0;
         }
-        return {
+        const row: TierOfferRow = {
           publisherOfferId: offerId,
           offerType,
           enabled: false,
           offerDesignId: tier.offerDesigns[0] || 'Default',
+          priceInUsdCents,
           products,
         };
+        if (subOfferData) {
+          row.subOfferCount = subOfferData.count;
+          row.subOfferPrices = subOfferData.prices;
+          row.subOfferProducts = Array.from({ length: subOfferData.count }, () => {
+            const block: Record<string, number> = {};
+            for (const pid of productIds) {
+              block[pid] = 0;
+            }
+            return block;
+          });
+        }
+        return row;
       });
 
       tierStore.update(tier.id, {

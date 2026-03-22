@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useActivePlayer } from '../context/ActivePlayerContext';
 import { api } from '../hooks/api';
-import type { Player } from 'shared/types';
+import type { Player, Tier } from 'shared/types';
+
+const TIERS = [
+  { id: 'tier-diamond', name: 'Diamond' },
+  { id: 'tier-gold', name: 'Gold' },
+  { id: 'tier-bronze', name: 'Bronze' },
+];
 
 function PlayerForm({ player, onSave, onCancel }: {
   player?: Player;
@@ -13,6 +19,7 @@ function PlayerForm({ player, onSave, onCancel }: {
     playerName: player?.playerName || '',
     playerProfileImage: player?.playerProfileImage || '',
     description: player?.description || '',
+    tierId: player?.tierId || 'tier-bronze',
     sessionMetadata: JSON.stringify(player?.sessionMetadata || {}, null, 2),
   });
 
@@ -24,6 +31,7 @@ function PlayerForm({ player, onSave, onCancel }: {
         playerName: form.playerName,
         playerProfileImage: form.playerProfileImage,
         description: form.description,
+        tierId: form.tierId,
         sessionMetadata: JSON.parse(form.sessionMetadata),
       });
     } catch {
@@ -72,6 +80,18 @@ function PlayerForm({ player, onSave, onCancel }: {
         />
       </div>
       <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Tier</label>
+        <select
+          value={form.tierId}
+          onChange={(e) => setForm({ ...form, tierId: e.target.value })}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        >
+          {TIERS.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Session Metadata (JSON)</label>
         <textarea
           value={form.sessionMetadata}
@@ -93,7 +113,7 @@ function PlayerForm({ player, onSave, onCancel }: {
 }
 
 export default function PlayersPage() {
-  const { players, refreshPlayers, activePlayer, setActivePlayer } = useActivePlayer();
+  const { players, refreshPlayers } = useActivePlayer();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -148,9 +168,7 @@ export default function PlayersPage() {
         {players.map((player) => (
           <div
             key={player.id}
-            className={`bg-white rounded-lg shadow-sm border p-5 ${
-              player.isActive ? 'border-primary-400 ring-1 ring-primary-200' : 'border-gray-200'
-            }`}
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-5"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4">
@@ -162,9 +180,13 @@ export default function PlayersPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-900">{player.playerName}</h3>
-                    {player.isActive && (
-                      <span className="text-xs bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full font-medium">
-                        Active
+                    {player.tierId && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        player.tierId === 'tier-diamond' ? 'bg-blue-100 text-blue-800' :
+                        player.tierId === 'tier-gold' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-orange-100 text-orange-800'
+                      }`}>
+                        {TIERS.find((t) => t.id === player.tierId)?.name || player.tierId}
                       </span>
                     )}
                   </div>
@@ -180,14 +202,6 @@ export default function PlayersPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {!player.isActive && (
-                  <button
-                    onClick={() => setActivePlayer(player.id)}
-                    className="text-xs text-primary-600 hover:text-primary-800 font-medium"
-                  >
-                    Set Active
-                  </button>
-                )}
                 <button
                   onClick={() => { setEditingPlayer(player); setShowForm(false); }}
                   className="text-xs text-gray-600 hover:text-gray-800 font-medium"

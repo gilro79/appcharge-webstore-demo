@@ -19,7 +19,7 @@ router.get('/:id', (req, res) => {
 
 // Create player
 router.post('/', (req, res) => {
-  const player: Player = { id: uuid(), isActive: false, ...req.body };
+  const player: Player = { id: uuid(), ...req.body };
   playerStore.create(player);
   res.status(201).json(player);
 });
@@ -38,14 +38,5 @@ router.delete('/:id', (req, res) => {
   res.json({ deleted: true });
 });
 
-// Set active player
-router.post('/:id/activate', (req, res) => {
-  // Deactivate all
-  playerStore.getAll().forEach((p) => playerStore.update(p.id, { isActive: false }));
-  // Activate selected
-  const updated = playerStore.update(req.params.id, { isActive: true });
-  if (!updated) { res.status(404).json({ error: 'Player not found' }); return; }
-  res.json(updated);
-});
 
 export default router;

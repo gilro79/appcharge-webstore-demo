@@ -2,17 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { api } from '../hooks/api';
 import type { Player } from 'shared/types';
 
-interface ActivePlayerContextType {
+interface PlayersContextType {
   players: Player[];
-  activePlayer: Player | null;
-  setActivePlayer: (id: string) => Promise<void>;
   refreshPlayers: () => Promise<void>;
 }
 
-const ActivePlayerContext = createContext<ActivePlayerContextType>({
+const PlayersContext = createContext<PlayersContextType>({
   players: [],
-  activePlayer: null,
-  setActivePlayer: async () => {},
   refreshPlayers: async () => {},
 });
 
@@ -32,20 +28,13 @@ export function ActivePlayerProvider({ children }: { children: React.ReactNode }
     refreshPlayers();
   }, [refreshPlayers]);
 
-  const activePlayer = players.find((p) => p.isActive) || null;
-
-  const setActivePlayer = async (id: string) => {
-    await api.activatePlayer(id);
-    await refreshPlayers();
-  };
-
   return (
-    <ActivePlayerContext.Provider value={{ players, activePlayer, setActivePlayer, refreshPlayers }}>
+    <PlayersContext.Provider value={{ players, refreshPlayers }}>
       {children}
-    </ActivePlayerContext.Provider>
+    </PlayersContext.Provider>
   );
 }
 
 export function useActivePlayer() {
-  return useContext(ActivePlayerContext);
+  return useContext(PlayersContext);
 }

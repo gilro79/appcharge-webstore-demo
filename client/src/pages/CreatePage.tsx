@@ -28,10 +28,6 @@ export default function CreatePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Create</h1>
-        <p className="text-gray-500 mt-1">Create products and offers via the Appcharge API</p>
-      </div>
       <CreateProductSection />
       <CreateOfferSection productIds={productIds} offerUis={offerUis} />
     </div>

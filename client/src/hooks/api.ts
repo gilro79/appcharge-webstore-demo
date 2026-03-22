@@ -19,7 +19,6 @@ export const api = {
   createPlayer: (data: any) => request<any>('/players', { method: 'POST', body: JSON.stringify(data) }),
   updatePlayer: (id: string, data: any) => request<any>(`/players/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePlayer: (id: string) => request<any>(`/players/${id}`, { method: 'DELETE' }),
-  activatePlayer: (id: string) => request<any>(`/players/${id}/activate`, { method: 'POST' }),
 
   // Tiers
   getTiers: () => request<any[]>('/tiers'),
@@ -27,6 +26,7 @@ export const api = {
   createTier: (data: any) => request<any>('/tiers', { method: 'POST', body: JSON.stringify(data) }),
   updateTier: (id: string, data: any) => request<any>(`/tiers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTier: (id: string) => request<any>(`/tiers/${id}`, { method: 'DELETE' }),
+  syncTiers: () => request<any[]>('/tiers/sync', { method: 'POST' }),
 
   // Events
   getEvents: () => request<any[]>('/events'),
@@ -47,4 +47,12 @@ export const api = {
     request<any>('/appcharge/products', { method: 'POST', body: JSON.stringify(data) }),
   createAppchargeOffer: (data: any) =>
     request<any>('/appcharge/offers', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Offer designs
+  getOfferDesigns: () => request<any[]>('/appcharge/offer-designs'),
+
+  // Price points
+  getPricePoints: () => request<any>('/appcharge/price-points'),
+  createPricePoint: (priceInUsdCents: number) =>
+    request<any>('/appcharge/price-points', { method: 'POST', body: JSON.stringify({ priceInUsdCents }) }),
 };

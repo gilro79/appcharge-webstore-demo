@@ -3,7 +3,7 @@ import { useActivePlayer } from '../context/ActivePlayerContext';
 import { api } from '../hooks/api';
 
 export default function DashboardPage() {
-  const { players, activePlayer } = useActivePlayer();
+  const { players } = useActivePlayer();
   const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
@@ -33,15 +33,15 @@ export default function DashboardPage() {
           <div className="text-3xl font-bold text-gray-900 mt-1">{players.length}</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Active Player</div>
-          <div className="text-xl font-bold text-gray-900 mt-1">
-            {activePlayer ? activePlayer.playerName : 'None'}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
           <div className="text-sm text-gray-500">Webstore Status</div>
           <div className="text-xl font-bold text-green-600 mt-1">
             {settings?.appchargeWebstoreUrl ? 'Configured' : 'Not configured'}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+          <div className="text-sm text-gray-500">API Base</div>
+          <div className="text-sm font-medium text-gray-700 mt-1 font-mono truncate">
+            {settings?.appchargeApiBase || 'N/A'}
           </div>
         </div>
       </div>
@@ -75,48 +75,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Active Player Info */}
-      {activePlayer && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Player Details</h2>
-          <div className="flex items-start gap-4">
-            <img
-              src={activePlayer.playerProfileImage}
-              alt={activePlayer.playerName}
-              className="w-16 h-16 rounded-full border-2 border-primary-200"
-            />
-            <div className="space-y-2">
-              <div>
-                <span className="text-sm text-gray-500">Name: </span>
-                <span className="font-medium">{activePlayer.playerName}</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Publisher Player ID: </span>
-                <span className="font-mono text-sm">{activePlayer.publisherPlayerId}</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Description: </span>
-                <span className="text-sm">{activePlayer.description || 'N/A'}</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Session Metadata: </span>
-                <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                  {JSON.stringify(activePlayer.sessionMetadata)}
-                </code>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* How it works */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">How It Works</h2>
         <div className="text-sm text-gray-600 space-y-2">
           <p><strong>1.</strong> Configure player profiles in the <strong>Players</strong> page.</p>
-          <p><strong>2.</strong> Edit what the personalization endpoint returns for each player in <strong>Personalization</strong>.</p>
-          <p><strong>3.</strong> Select the active player using the dropdown in the header.</p>
-          <p><strong>4.</strong> When Appcharge calls our webhook endpoints, we return the configured data.</p>
+          <p><strong>2.</strong> Edit what the personalization endpoint returns for each tier in <strong>Personalization</strong>.</p>
+          <p><strong>3.</strong> When Appcharge calls our webhook endpoints, we match the player by ID and return their tier's offers.</p>
+          <p><strong>4.</strong> Unknown player IDs automatically get a <strong>Guest</strong> profile.</p>
           <p><strong>5.</strong> All API calls appear in the <strong>API Log</strong> panel on the right in real-time.</p>
         </div>
       </div>

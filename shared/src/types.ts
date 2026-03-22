@@ -7,7 +7,6 @@ export interface Player {
   playerProfileImage: string;
   sessionMetadata: Record<string, string>;
   description?: string;
-  isActive: boolean;
   tierId?: string;
 }
 
@@ -20,7 +19,14 @@ export interface TierOfferRow {
   offerType: OfferType;
   enabled: boolean;
   offerDesignId: string;
+  priceInUsdCents?: number;
   products: Record<string, number>;
+  /** Rolling offers only: number of sub-offer blocks from the API */
+  subOfferCount?: number;
+  /** Rolling offers only: per-block product quantities */
+  subOfferProducts?: Record<string, number>[];
+  /** Rolling offers only: per-block price in USD cents */
+  subOfferPrices?: number[];
 }
 
 export interface Tier {

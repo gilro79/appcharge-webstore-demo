@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import type { Tier } from 'shared/src/types.js';
 import { tierStore } from '../../index.js';
+import { syncFromAppcharge } from '../../services/syncAppcharge.js';
 
 const router = Router();
 
@@ -36,6 +37,16 @@ router.put('/:id', (req, res) => {
   const updated = tierStore.update(req.params.id, req.body);
   if (!updated) { res.status(404).json({ error: 'Tier not found' }); return; }
   res.json(updated);
+});
+
+// Re-sync offers & products from Appcharge (preserves existing tier settings)
+router.post('/sync', async (_req, res) => {
+  try {
+    await syncFromAppcharge();
+    res.json(tierStore.getAll());
+  } catch (err) {
+    res.status(500).json({ error: 'Sync failed', details: String(err) });
+  }
 });
 
 // Delete tier
