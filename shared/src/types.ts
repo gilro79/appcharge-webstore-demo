@@ -41,7 +41,8 @@ export interface Tier {
 // ─── Auth (returned to Appcharge) ───
 
 export interface AuthRequest {
-  publisherPlayerId: string;
+  token?: string;
+  publisherPlayerId?: string;
   [key: string]: unknown;
 }
 

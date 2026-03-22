@@ -5,10 +5,12 @@ import { playerStore } from '../../index.js';
 const router = Router();
 
 router.post('/', (req, res) => {
-  const { publisherPlayerId } = req.body as AuthRequest;
+  const body = req.body as AuthRequest;
+  // Appcharge sends the player ID in the "token" field
+  const publisherPlayerId = body.token || body.publisherPlayerId;
 
   if (!publisherPlayerId) {
-    res.status(400).json({ error: 'Missing publisherPlayerId' });
+    res.status(400).json({ error: 'Missing token' });
     return;
   }
 
