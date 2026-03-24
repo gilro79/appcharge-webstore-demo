@@ -2,10 +2,14 @@ import { Router } from 'express';
 import type { AppSettings, AppEnvironment } from 'shared/src/types.js';
 import { config } from '../../config.js';
 import { logOutboundCall } from '../../services/apiLogger.js';
+import { settingsStore } from '../../index.js';
 
 const router = Router();
 
+const SETTINGS_ID = 'app-settings';
+
 let settings: AppSettings = {
+  id: SETTINGS_ID,
   appchargeApiKey: config.appchargeApiKey,
   appchargeWebstoreUrl: config.appchargeWebstoreUrl,
   appchargeApiBase: config.appchargeApiBase,
@@ -19,6 +23,21 @@ let settings: AppSettings = {
   ],
   activeEnvName: 'Default',
 };
+
+/** Load persisted settings from the store, or seed with env-var defaults. */
+export function initSettings(): void {
+  const stored = settingsStore.getById(SETTINGS_ID);
+  if (stored) {
+    settings = stored;
+  } else {
+    settingsStore.create(settings);
+  }
+}
+
+/** Persist the current in-memory settings to the store. */
+function persistSettings(): void {
+  settingsStore.update(SETTINGS_ID, settings);
+}
 
 /** Returns the currently active publisher token (used by proxy routes and sync). */
 export function getPublisherToken(): string {
@@ -62,6 +81,7 @@ router.put('/', (req, res) => {
   if (body.publisherToken !== undefined) settings.publisherToken = body.publisherToken;
   if (body.environments !== undefined) settings.environments = body.environments;
   if (body.activeEnvName !== undefined) settings.activeEnvName = body.activeEnvName;
+  persistSettings();
   res.json({ updated: true });
 });
 
@@ -88,6 +108,7 @@ router.post('/switch-env', async (req, res) => {
     console.error('[switch-env] sync error:', err);
   }
 
+  persistSettings();
   res.json({ switched: name });
 });
 
@@ -104,6 +125,7 @@ router.post('/environments', (req, res) => {
   } else {
     settings.environments.push(env);
   }
+  persistSettings();
   res.json({ saved: env.name, environments: settings.environments.map((e) => ({ ...e, publisherToken: `${e.publisherToken.slice(0, 8)}...` })) });
 });
 
@@ -115,6 +137,7 @@ router.delete('/environments/:name', (req, res) => {
     return;
   }
   settings.environments = settings.environments.filter((e) => e.name !== name);
+  persistSettings();
   res.json({ deleted: name });
 });
 

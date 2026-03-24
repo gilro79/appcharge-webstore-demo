@@ -5,7 +5,7 @@ import { config } from './config.js';
 import { Store } from './store/Store.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { seedPlayers } from './services/seedData.js';
-import type { Player, Tier, AppchargeEvent, ApiLogEntry } from 'shared/src/types.js';
+import type { Player, Tier, AppchargeEvent, ApiLogEntry, AppSettings } from 'shared/src/types.js';
 
 // Routes
 import authRoutes from './routes/appcharge/auth.js';
@@ -26,6 +26,7 @@ export let playerStore: Store<Player> | import('./store/MongoStore.js').MongoSto
 export let tierStore: Store<Tier> | import('./store/MongoStore.js').MongoStore<Tier>;
 export let eventStore: Store<AppchargeEvent> | import('./store/MongoStore.js').MongoStore<AppchargeEvent>;
 export let logStore: Store<ApiLogEntry> | import('./store/MongoStore.js').MongoStore<ApiLogEntry>;
+export let settingsStore: Store<AppSettings> | import('./store/MongoStore.js').MongoStore<AppSettings>;
 
 async function bootstrap() {
   const mongoUri = process.env.MONGODB_URI;
@@ -39,21 +40,28 @@ async function bootstrap() {
     const ts = new MongoStore<Tier>('tiers');
     const es = new MongoStore<AppchargeEvent>('events');
     const ls = new MongoStore<ApiLogEntry>('logs');
+    const ss = new MongoStore<AppSettings>('settings');
 
     // Load existing data from MongoDB into memory
-    await Promise.all([ps.init(), ts.init(), es.init(), ls.init()]);
+    await Promise.all([ps.init(), ts.init(), es.init(), ls.init(), ss.init()]);
 
     playerStore = ps;
     tierStore = ts;
     eventStore = es;
     logStore = ls;
+    settingsStore = ss;
   } else {
     // ─── JSON file mode (local dev) ───
     playerStore = new Store<Player>('players', true);
     tierStore = new Store<Tier>('tiers', true);
     eventStore = new Store<AppchargeEvent>('events');
     logStore = new Store<ApiLogEntry>('logs');
+    settingsStore = new Store<AppSettings>('settings', true);
   }
+
+  // Load persisted settings (or seed defaults)
+  const { initSettings } = await import('./routes/dashboard/settings.js');
+  initSettings();
 
   // Seed demo data
   playerStore.seed(seedPlayers);

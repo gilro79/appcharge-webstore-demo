@@ -164,6 +164,7 @@ export interface AppEnvironment {
 }
 
 export interface AppSettings {
+  id: string;
   appchargeApiKey: string;
   appchargeWebstoreUrl: string;
   appchargeApiBase: string;
