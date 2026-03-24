@@ -48,6 +48,14 @@ export const api = {
   createAppchargeOffer: (data: any) =>
     request<any>('/appcharge/offers', { method: 'POST', body: JSON.stringify(data) }),
 
+  // Environments
+  switchEnv: (name: string) =>
+    request<any>('/settings/switch-env', { method: 'POST', body: JSON.stringify({ name }) }),
+  saveEnvironment: (env: any) =>
+    request<any>('/settings/environments', { method: 'POST', body: JSON.stringify(env) }),
+  deleteEnvironment: (name: string) =>
+    request<any>(`/settings/environments/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+
   // Offer designs
   getOfferDesigns: () => request<any[]>('/appcharge/offer-designs'),
 

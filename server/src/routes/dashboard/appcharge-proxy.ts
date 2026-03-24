@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { config } from '../../config.js';
 import { syncFromAppcharge, getCachedOfferUis } from '../../services/syncAppcharge.js';
 import { logOutboundCall } from '../../services/apiLogger.js';
+import { getPublisherToken, getApiBase } from './settings.js';
 
 const router = Router();
 
@@ -12,7 +12,8 @@ router.get('/offer-uis', (_req, res) => {
 
 // POST /api/dashboard/appcharge/products → proxy to Appcharge create product
 router.post('/products', async (req, res) => {
-  const { appchargeApiBase, appchargePublisherToken } = config;
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
   if (!appchargePublisherToken) {
     res.status(400).json({ error: 'Publisher token not configured' });
     return;
@@ -59,7 +60,8 @@ router.post('/products', async (req, res) => {
 
 // POST /api/dashboard/appcharge/offers → proxy to Appcharge create offer
 router.post('/offers', async (req, res) => {
-  const { appchargeApiBase, appchargePublisherToken } = config;
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
   if (!appchargePublisherToken) {
     res.status(400).json({ error: 'Publisher token not configured' });
     return;
@@ -106,7 +108,8 @@ router.post('/offers', async (req, res) => {
 
 // GET /api/dashboard/appcharge/offer-designs → proxy to Appcharge get offer designs
 router.get('/offer-designs', async (_req, res) => {
-  const { appchargeApiBase, appchargePublisherToken } = config;
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
   if (!appchargePublisherToken) {
     res.status(400).json({ error: 'Publisher token not configured' });
     return;
@@ -144,7 +147,8 @@ router.get('/offer-designs', async (_req, res) => {
 
 // GET /api/dashboard/appcharge/price-points → proxy to Appcharge get price points
 router.get('/price-points', async (_req, res) => {
-  const { appchargeApiBase, appchargePublisherToken } = config;
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
   if (!appchargePublisherToken) {
     res.status(400).json({ error: 'Publisher token not configured' });
     return;
@@ -182,7 +186,8 @@ router.get('/price-points', async (_req, res) => {
 
 // POST /api/dashboard/appcharge/price-points → proxy to Appcharge create price point
 router.post('/price-points', async (req, res) => {
-  const { appchargeApiBase, appchargePublisherToken } = config;
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
   if (!appchargePublisherToken) {
     res.status(400).json({ error: 'Publisher token not configured' });
     return;

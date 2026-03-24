@@ -150,8 +150,17 @@ export interface ApiLogEntry {
 
 // ─── Settings ───
 
+export interface AppEnvironment {
+  name: string;
+  publisherToken: string;
+  webstoreUrl: string;
+}
+
 export interface AppSettings {
   appchargeApiKey: string;
   appchargeWebstoreUrl: string;
   appchargeApiBase: string;
+  publisherToken: string;
+  environments: AppEnvironment[];
+  activeEnvName: string;
 }

@@ -1,7 +1,7 @@
-import { config } from '../config.js';
 import { tierStore } from '../index.js';
 import type { TierOfferRow, OfferType } from 'shared/src/types.js';
 import { logOutboundCall } from './apiLogger.js';
+import { getPublisherToken, getApiBase } from '../routes/dashboard/settings.js';
 
 interface AppchargeOffer {
   publisherOfferId: string;
@@ -29,7 +29,8 @@ interface AppchargeProduct {
 }
 
 export async function syncFromAppcharge(): Promise<void> {
-  const { appchargeApiBase, appchargePublisherToken } = config;
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
   if (!appchargePublisherToken) {
     console.log('[sync] No publisher token configured, skipping Appcharge sync');
     return;

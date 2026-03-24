@@ -10,6 +10,8 @@ export default function DashboardPage() {
     api.getSettings().then(setSettings).catch(() => {});
   }, []);
 
+  const webstoreUrl = settings?.appchargeWebstoreUrl || '';
+
   const handleRefreshStore = async () => {
     try {
       const result = await api.refreshStore();
@@ -51,42 +53,16 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Appcharge Webstore</h2>
-            <p className="text-sm text-gray-500 mt-1">Live webstore powered by Appcharge</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {settings?.activeEnvName ? `Environment: ${settings.activeEnvName}` : 'Live webstore powered by Appcharge'}
+            </p>
           </div>
-          <a
-            href="https://appcharge-onboarding-demo-sandbox.appchargestore.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            Open Webstore
-          </a>
-        </div>
-        <div className="mt-3">
-          <a
-            href="https://appcharge-onboarding-demo-sandbox.appchargestore.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-primary-600 hover:text-primary-800 font-mono"
-          >
-            appcharge-onboarding-demo-sandbox.appchargestore.com
-          </a>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          {settings?.appchargeWebstoreUrl && (
+          {webstoreUrl && (
             <a
-              href={settings.appchargeWebstoreUrl}
+              href={webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -94,6 +70,28 @@ export default function DashboardPage() {
               Open Webstore
             </a>
           )}
+        </div>
+        {webstoreUrl && (
+          <div className="mt-3">
+            <a
+              href={webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary-600 hover:text-primary-800 font-mono"
+            >
+              {webstoreUrl}
+            </a>
+          </div>
+        )}
+        {!webstoreUrl && (
+          <p className="mt-3 text-sm text-gray-400">No webstore URL configured. Set it in Settings.</p>
+        )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={handleRefreshStore}
             className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
