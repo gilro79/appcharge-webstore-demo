@@ -3,14 +3,9 @@ import { useActivePlayer } from '../context/ActivePlayerContext';
 import { api } from '../hooks/api';
 import type { Player, Tier } from 'shared/types';
 
-const TIERS = [
-  { id: 'tier-diamond', name: 'Diamond' },
-  { id: 'tier-gold', name: 'Gold' },
-  { id: 'tier-bronze', name: 'Bronze' },
-];
-
-function PlayerForm({ player, onSave, onCancel }: {
+function PlayerForm({ player, tiers, onSave, onCancel }: {
   player?: Player;
+  tiers: { id: string; name: string }[];
   onSave: (data: Partial<Player>) => void;
   onCancel: () => void;
 }) {
@@ -19,13 +14,28 @@ function PlayerForm({ player, onSave, onCancel }: {
     playerName: player?.playerName || '',
     playerProfileImage: player?.playerProfileImage || '',
     description: player?.description || '',
-    tierId: player?.tierId || 'tier-bronze',
+    tierId: player?.tierId || (tiers[0]?.id || ''),
     sessionMetadata: JSON.stringify(player?.sessionMetadata || {}, null, 2),
+    balances: { ...(player?.balances || {}) } as Record<string, number>,
   });
+
+  // Fetch products for balance editing
+  const [products, setProducts] = useState<{ publisherProductId: string; name?: string }[]>([]);
+  useEffect(() => {
+    api.getProducts().then((data) => {
+      const list = Array.isArray(data) ? data : [];
+      setProducts(list.map((p: any) => ({ publisherProductId: p.publisherProductId, name: p.name })));
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Clean up balances: remove zero-value entries
+      const cleanBalances: Record<string, number> = {};
+      for (const [k, v] of Object.entries(form.balances)) {
+        if (v > 0) cleanBalances[k] = v;
+      }
       onSave({
         publisherPlayerId: form.publisherPlayerId,
         playerName: form.playerName,
@@ -33,6 +43,7 @@ function PlayerForm({ player, onSave, onCancel }: {
         description: form.description,
         tierId: form.tierId,
         sessionMetadata: JSON.parse(form.sessionMetadata),
+        balances: Object.keys(cleanBalances).length > 0 ? cleanBalances : undefined,
       });
     } catch {
       alert('Invalid JSON in session metadata');
@@ -86,7 +97,7 @@ function PlayerForm({ player, onSave, onCancel }: {
           onChange={(e) => setForm({ ...form, tierId: e.target.value })}
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         >
-          {TIERS.map((t) => (
+          {tiers.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
@@ -99,6 +110,34 @@ function PlayerForm({ player, onSave, onCancel }: {
           rows={4}
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         />
+      </div>
+      {/* Balances */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Balances</label>
+        <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-2">
+          {products.map((p) => (
+            <div key={p.publisherProductId} className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 w-40 truncate" title={p.publisherProductId}>
+                {p.name || p.publisherProductId}
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={form.balances[p.publisherProductId] ?? 0}
+                onChange={(e) => {
+                  setForm({
+                    ...form,
+                    balances: { ...form.balances, [p.publisherProductId]: parseInt(e.target.value) || 0 },
+                  });
+                }}
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm w-24 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+          ))}
+          {products.length === 0 && (
+            <p className="text-xs text-gray-400">No products found. Configure a publisher token to load products.</p>
+          )}
+        </div>
       </div>
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
@@ -116,6 +155,14 @@ export default function PlayersPage() {
   const { players, refreshPlayers } = useActivePlayer();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [tiers, setTiers] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch tiers from the API
+  useEffect(() => {
+    api.getTiers().then((data: Tier[]) => {
+      setTiers(data.map((t) => ({ id: t.id, name: t.name })));
+    }).catch(() => {});
+  }, []);
 
   const handleCreate = async (data: Partial<Player>) => {
     await api.createPlayer(data);
@@ -158,6 +205,7 @@ export default function PlayersPage() {
           </h2>
           <PlayerForm
             player={editingPlayer || undefined}
+            tiers={tiers}
             onSave={editingPlayer ? handleUpdate : handleCreate}
             onCancel={() => { setShowForm(false); setEditingPlayer(null); }}
           />
@@ -182,17 +230,30 @@ export default function PlayersPage() {
                     <h3 className="font-semibold text-gray-900">{player.playerName}</h3>
                     {player.tierId && (
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        player.tierId === 'tier-diamond' ? 'bg-blue-100 text-blue-800' :
-                        player.tierId === 'tier-gold' ? 'bg-yellow-100 text-yellow-800' :
+                        player.tierId.includes('diamond') ? 'bg-blue-100 text-blue-800' :
+                        player.tierId.includes('gold') ? 'bg-yellow-100 text-yellow-800' :
                         'bg-orange-100 text-orange-800'
                       }`}>
-                        {TIERS.find((t) => t.id === player.tierId)?.name || player.tierId}
+                        {tiers.find((t) => t.id === player.tierId)?.name || player.tierId}
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-gray-500 font-mono">ID: {player.publisherPlayerId}</p>
                   {player.description && (
                     <p className="text-sm text-gray-500 mt-1">{player.description}</p>
+                  )}
+                  {/* Balances */}
+                  {player.balances && Object.keys(player.balances).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {Object.entries(player.balances).map(([productId, qty]) => (
+                        <span
+                          key={productId}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
+                        >
+                          {productId}: {qty}
+                        </span>
+                      ))}
+                    </div>
                   )}
                   <div className="mt-2">
                     <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">

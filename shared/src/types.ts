@@ -8,6 +8,7 @@ export interface Player {
   sessionMetadata: Record<string, string>;
   description?: string;
   tierId?: string;
+  balances?: Record<string, number>;
 }
 
 // ─── Tiers ───
@@ -27,6 +28,9 @@ export interface TierOfferRow {
   subOfferProducts?: Record<string, number>[];
   /** Rolling offers only: per-block price in USD cents */
   subOfferPrices?: number[];
+  badgeId?: string;
+  productSale?: { type: 'percentage' | 'multiplier'; sale: number };
+  priceDiscount?: { type: 'percentage'; discount: number };
 }
 
 export interface Tier {
@@ -65,6 +69,8 @@ export interface OfferProduct {
 export interface OfferProductSequence {
   index: number;
   products: OfferProduct[];
+  productSale?: { type: 'percentage' | 'multiplier'; sale: number };
+  priceDiscount?: { type: 'percentage'; discount: number };
 }
 
 export interface PersonalizationOffer {
@@ -72,6 +78,7 @@ export interface PersonalizationOffer {
   productsSequence: OfferProductSequence[];
   offerDesignOverride?: { offerDesignId: string };
   dynamicOfferUi?: { offerDesignId: string };
+  badges?: { publisherBadgeId: string }[];
 }
 
 export interface Balance {

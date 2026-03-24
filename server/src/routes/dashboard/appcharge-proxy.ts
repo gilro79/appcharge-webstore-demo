@@ -106,6 +106,84 @@ router.post('/offers', async (req, res) => {
   }
 });
 
+// GET /api/dashboard/appcharge/badges → proxy to Appcharge get badges
+router.get('/badges', async (_req, res) => {
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
+  if (!appchargePublisherToken) {
+    res.status(400).json({ error: 'Publisher token not configured' });
+    return;
+  }
+
+  const url = `${appchargeApiBase}/components/v1/badge`;
+  const start = Date.now();
+  try {
+    const response = await fetch(url, {
+      headers: { 'x-publisher-token': appchargePublisherToken },
+    });
+
+    const data = await response.json().catch(() => ([]));
+
+    logOutboundCall({
+      method: 'GET',
+      url,
+      category: 'sync',
+      requestBody: null,
+      responseStatus: response.status,
+      responseBody: data,
+      durationMs: Date.now() - start,
+    });
+
+    if (!response.ok) {
+      res.status(response.status).json({ error: (data as any).message || 'Appcharge API error', details: data });
+      return;
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch badges', details: String(err) });
+  }
+});
+
+// GET /api/dashboard/appcharge/products → proxy to Appcharge get products
+router.get('/products', async (_req, res) => {
+  const appchargeApiBase = getApiBase();
+  const appchargePublisherToken = getPublisherToken();
+  if (!appchargePublisherToken) {
+    res.status(400).json({ error: 'Publisher token not configured' });
+    return;
+  }
+
+  const url = `${appchargeApiBase}/components/v1/product`;
+  const start = Date.now();
+  try {
+    const response = await fetch(url, {
+      headers: { 'x-publisher-token': appchargePublisherToken },
+    });
+
+    const data = await response.json().catch(() => ([]));
+
+    logOutboundCall({
+      method: 'GET',
+      url,
+      category: 'sync',
+      requestBody: null,
+      responseStatus: response.status,
+      responseBody: data,
+      durationMs: Date.now() - start,
+    });
+
+    if (!response.ok) {
+      res.status(response.status).json({ error: (data as any).message || 'Appcharge API error', details: data });
+      return;
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch products', details: String(err) });
+  }
+});
+
 // GET /api/dashboard/appcharge/offer-designs → proxy to Appcharge get offer designs
 router.get('/offer-designs', async (_req, res) => {
   const appchargeApiBase = getApiBase();

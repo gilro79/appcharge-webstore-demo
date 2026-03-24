@@ -38,6 +38,14 @@ export default function PersonalizationPage() {
   const [sortCol, setSortCol] = useState<'type' | 'price' | ''>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
+  // ─── Badges state ───
+  interface Badge {
+    publisherBadgeId: string;
+    name: string;
+    [key: string]: unknown;
+  }
+  const [badges, setBadges] = useState<Badge[]>([]);
+
   // ─── Offer Designs state ───
   const [offerDesigns, setOfferDesigns] = useState<OfferDesign[]>([]);
 
@@ -56,6 +64,7 @@ export default function PersonalizationPage() {
       }
     });
     api.getOfferDesigns().then(setOfferDesigns).catch(() => {});
+    api.getBadges().then(setBadges).catch(() => {});
   }, []);
 
   // Load selected tier
@@ -310,7 +319,7 @@ export default function PersonalizationPage() {
     [pricePoints],
   );
 
-  const colCount = 5 + (tier?.productColumns.length || 0);
+  const colCount = 8 + (tier?.productColumns.length || 0);
 
   return (
     <div className="space-y-6">
@@ -490,6 +499,9 @@ export default function PersonalizationPage() {
                       </th>
                       <th className="px-3 py-2 text-center font-medium text-gray-600 whitespace-nowrap">On/Off</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Offer Design</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Badge</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Product Sale</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Price Discount</th>
                       {tier.productColumns.map((col) => (
                         <th key={col} className="px-3 py-2 text-center font-medium text-gray-600 whitespace-nowrap">
                           <span className="text-xs">{col}</span>
@@ -574,6 +586,101 @@ export default function PersonalizationPage() {
                               ))}
                             </select>
                           </td>
+                          {/* Badge */}
+                          <td className="px-3 py-2">
+                            {selectedRolling && (
+                              <select
+                                value={selectedRolling.badgeId || ''}
+                                onChange={(e) => {
+                                  if (!tier || !selectedRolling) return;
+                                  const offers = tier.offers.map((o) =>
+                                    o.publisherOfferId === selectedRolling.publisherOfferId
+                                      ? { ...o, badgeId: e.target.value || undefined }
+                                      : o
+                                  );
+                                  setTier({ ...tier, offers });
+                                  setDirty(true);
+                                }}
+                                className="border border-gray-300 rounded px-2 py-1 text-sm w-32 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                              >
+                                <option value="">None</option>
+                                {badges.map((b) => (
+                                  <option key={b.publisherBadgeId} value={b.publisherBadgeId}>{b.name || b.publisherBadgeId}</option>
+                                ))}
+                              </select>
+                            )}
+                          </td>
+                          {/* Product Sale */}
+                          <td className="px-3 py-2">
+                            {selectedRolling && (
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={selectedRolling.productSale?.type || ''}
+                                  onChange={(e) => {
+                                    if (!tier || !selectedRolling) return;
+                                    const val = e.target.value as '' | 'percentage' | 'multiplier';
+                                    const offers = tier.offers.map((o) =>
+                                      o.publisherOfferId === selectedRolling.publisherOfferId
+                                        ? { ...o, productSale: val ? { type: val, sale: o.productSale?.sale || 0 } : undefined }
+                                        : o
+                                    );
+                                    setTier({ ...tier, offers });
+                                    setDirty(true);
+                                  }}
+                                  className="border border-gray-300 rounded px-1 py-1 text-xs w-16"
+                                >
+                                  <option value="">None</option>
+                                  <option value="percentage">%</option>
+                                  <option value="multiplier">x</option>
+                                </select>
+                                {selectedRolling.productSale && (
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={selectedRolling.productSale.sale}
+                                    onChange={(e) => {
+                                      if (!tier || !selectedRolling?.productSale) return;
+                                      const offers = tier.offers.map((o) =>
+                                        o.publisherOfferId === selectedRolling.publisherOfferId
+                                          ? { ...o, productSale: { ...o.productSale!, sale: parseFloat(e.target.value) || 0 } }
+                                          : o
+                                      );
+                                      setTier({ ...tier, offers });
+                                      setDirty(true);
+                                    }}
+                                    className="border border-gray-300 rounded px-1 py-1 text-xs w-14 text-center"
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          {/* Price Discount */}
+                          <td className="px-3 py-2">
+                            {selectedRolling && (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  placeholder="—"
+                                  value={selectedRolling.priceDiscount?.discount ?? ''}
+                                  onChange={(e) => {
+                                    if (!tier || !selectedRolling) return;
+                                    const val = parseFloat(e.target.value);
+                                    const offers = tier.offers.map((o) =>
+                                      o.publisherOfferId === selectedRolling.publisherOfferId
+                                        ? { ...o, priceDiscount: !isNaN(val) && val > 0 ? { type: 'percentage' as const, discount: val } : undefined }
+                                        : o
+                                    );
+                                    setTier({ ...tier, offers });
+                                    setDirty(true);
+                                  }}
+                                  className="border border-gray-300 rounded px-1 py-1 text-xs w-14 text-center"
+                                />
+                                {selectedRolling.priceDiscount && <span className="text-xs text-gray-500">%</span>}
+                              </div>
+                            )}
+                          </td>
                           {/* Product columns — empty for main row, sub-offers have them */}
                           {tier.productColumns.map((col) => (
                             <td key={col} className="px-3 py-2 text-center text-gray-300 text-xs">
@@ -602,6 +709,12 @@ export default function PersonalizationPage() {
                             {/* Toggle — empty */}
                             <td className="px-3 py-2" />
                             {/* Design — empty */}
+                            <td className="px-3 py-2" />
+                            {/* Badge — empty */}
+                            <td className="px-3 py-2" />
+                            {/* Product Sale — empty */}
+                            <td className="px-3 py-2" />
+                            {/* Price Discount — empty */}
                             <td className="px-3 py-2" />
                             {/* Product quantity columns */}
                             {tier.productColumns.map((col) => {
@@ -684,6 +797,63 @@ export default function PersonalizationPage() {
                               <option key={d.externalId} value={d.externalId}>{d.name}</option>
                             ))}
                           </select>
+                        </td>
+                        {/* Badge */}
+                        <td className="px-3 py-2">
+                          <select
+                            value={offer.badgeId || ''}
+                            onChange={(e) => updateOffer(i, { badgeId: e.target.value || undefined })}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm w-32 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                          >
+                            <option value="">None</option>
+                            {badges.map((b) => (
+                              <option key={b.publisherBadgeId} value={b.publisherBadgeId}>{b.name || b.publisherBadgeId}</option>
+                            ))}
+                          </select>
+                        </td>
+                        {/* Product Sale */}
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            <select
+                              value={offer.productSale?.type || ''}
+                              onChange={(e) => {
+                                const val = e.target.value as '' | 'percentage' | 'multiplier';
+                                updateOffer(i, { productSale: val ? { type: val, sale: offer.productSale?.sale || 0 } : undefined });
+                              }}
+                              className="border border-gray-300 rounded px-1 py-1 text-xs w-16"
+                            >
+                              <option value="">None</option>
+                              <option value="percentage">%</option>
+                              <option value="multiplier">x</option>
+                            </select>
+                            {offer.productSale && (
+                              <input
+                                type="number"
+                                min={0}
+                                value={offer.productSale.sale}
+                                onChange={(e) => updateOffer(i, { productSale: { ...offer.productSale!, sale: parseFloat(e.target.value) || 0 } })}
+                                className="border border-gray-300 rounded px-1 py-1 text-xs w-14 text-center"
+                              />
+                            )}
+                          </div>
+                        </td>
+                        {/* Price Discount */}
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              placeholder="—"
+                              value={offer.priceDiscount?.discount ?? ''}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                updateOffer(i, { priceDiscount: !isNaN(val) && val > 0 ? { type: 'percentage', discount: val } : undefined });
+                              }}
+                              className="border border-gray-300 rounded px-1 py-1 text-xs w-14 text-center"
+                            />
+                            {offer.priceDiscount && <span className="text-xs text-gray-500">%</span>}
+                          </div>
                         </td>
                         {/* Product quantity columns */}
                         {tier.productColumns.map((col) => {

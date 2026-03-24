@@ -30,6 +30,11 @@ export function getApiBase(): string {
   return settings.appchargeApiBase;
 }
 
+/** Returns the active environment name. */
+export function getActiveEnvName(): string {
+  return settings.activeEnvName;
+}
+
 router.get('/', (_req, res) => {
   res.json({
     ...settings,
@@ -61,7 +66,7 @@ router.put('/', (req, res) => {
 });
 
 // Switch active environment
-router.post('/switch-env', (req, res) => {
+router.post('/switch-env', async (req, res) => {
   const { name } = req.body as { name: string };
   const env = settings.environments.find((e) => e.name === name);
   if (!env) {
@@ -71,6 +76,18 @@ router.post('/switch-env', (req, res) => {
   settings.activeEnvName = name;
   settings.publisherToken = env.publisherToken;
   settings.appchargeWebstoreUrl = env.webstoreUrl;
+
+  // Ensure tiers exist for the new env and re-sync from Appcharge
+  const { ensureTiersForEnv } = await import('../../services/envTiers.js');
+  ensureTiersForEnv(name);
+
+  try {
+    const { syncFromAppcharge } = await import('../../services/syncAppcharge.js');
+    await syncFromAppcharge();
+  } catch (err) {
+    console.error('[switch-env] sync error:', err);
+  }
+
   res.json({ switched: name });
 });
 

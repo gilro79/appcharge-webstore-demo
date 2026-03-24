@@ -9,6 +9,7 @@ export const seedPlayers: Player[] = [
     sessionMetadata: { abTest: 'group1', locale: 'en-US' },
     description: 'Whale / Diamond tier player with high balances and premium offers',
     tierId: 'tier-diamond',
+    balances: { star: 5000, RocketBaby: 120 },
   },
   {
     id: 'player-2',
@@ -18,6 +19,7 @@ export const seedPlayers: Player[] = [
     sessionMetadata: { abTest: 'group2', locale: 'en-US' },
     description: 'Mid-tier gold player with progression offers',
     tierId: 'tier-gold',
+    balances: { star: 1200, RocketBaby: 30 },
   },
   {
     id: 'player-3',
@@ -27,6 +29,7 @@ export const seedPlayers: Player[] = [
     sessionMetadata: { abTest: 'group1', locale: 'fr-FR' },
     description: 'New player with starter packs and first-purchase bonuses',
     tierId: 'tier-bronze',
+    balances: { star: 200, RocketBaby: 5 },
   },
 ];
 

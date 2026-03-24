@@ -3,12 +3,14 @@ import { v4 as uuid } from 'uuid';
 import type { Tier } from 'shared/src/types.js';
 import { tierStore } from '../../index.js';
 import { syncFromAppcharge } from '../../services/syncAppcharge.js';
+import { getTiersForEnv } from '../../services/envTiers.js';
+import { getActiveEnvName } from './settings.js';
 
 const router = Router();
 
-// List all tiers
+// List tiers for the active environment
 router.get('/', (_req, res) => {
-  res.json(tierStore.getAll());
+  res.json(getTiersForEnv(getActiveEnvName()));
 });
 
 // Get single tier
