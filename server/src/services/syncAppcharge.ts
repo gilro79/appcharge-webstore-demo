@@ -1,8 +1,7 @@
 import { tierStore } from '../index.js';
 import type { TierOfferRow, OfferType } from 'shared/src/types.js';
 import { logOutboundCall } from './apiLogger.js';
-import { getPublisherToken, getApiBase, getActiveEnvName } from '../routes/dashboard/settings.js';
-import { getTiersForEnv } from './envTiers.js';
+import { getPublisherToken, getApiBase } from '../routes/dashboard/settings.js';
 
 interface AppchargeOffer {
   publisherOfferId: string;
@@ -121,8 +120,8 @@ export async function syncFromAppcharge(): Promise<void> {
 
     console.log(`[sync] Fetched ${offerIds.length} offers, ${productIds.length} products from Appcharge`);
 
-    // Update only the active env's tiers with the full offer/product lists
-    const tiers = getTiersForEnv(getActiveEnvName());
+    // Update every tier with the full offer/product lists
+    const tiers = tierStore.getAll();
     for (const tier of tiers) {
       // Build a lookup of existing offer rows by ID
       const existingOffers = new Map(tier.offers.map((o) => [o.publisherOfferId, o]));

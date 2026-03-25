@@ -4,7 +4,7 @@ import path from 'path';
 import { config } from './config.js';
 import { Store } from './store/Store.js';
 import { requestLogger } from './middleware/requestLogger.js';
-import { seedPlayers } from './services/seedData.js';
+import { seedPlayers, seedTiers } from './services/seedData.js';
 import type { Player, Tier, AppchargeEvent, ApiLogEntry, AppSettings } from 'shared/src/types.js';
 
 // Routes
@@ -65,11 +65,7 @@ async function bootstrap() {
 
   // Seed demo data
   playerStore.seed(seedPlayers);
-
-  // Migrate any unscoped tiers to Default:: prefix, then ensure Default env tiers exist
-  const { migrateUnscopedTiers, ensureTiersForEnv } = await import('./services/envTiers.js');
-  migrateUnscopedTiers();
-  ensureTiersForEnv('Default');
+  tierStore.seed(seedTiers);
 
   // ─── Express App ───
   const app = express();

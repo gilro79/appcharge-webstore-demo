@@ -59,12 +59,6 @@ export const api = {
   // Offer designs
   getOfferDesigns: () => request<any[]>('/appcharge/offer-designs'),
 
-  // Badges
-  getBadges: () => request<any[]>('/appcharge/badges'),
-
-  // Products (GET list)
-  getProducts: () => request<any[]>('/appcharge/products'),
-
   // Price points
   getPricePoints: () => request<any>('/appcharge/price-points'),
   createPricePoint: (priceInUsdCents: number) =>
