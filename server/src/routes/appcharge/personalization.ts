@@ -38,20 +38,20 @@ router.post('/', (req, res) => {
           index: idx + 1,
           products: Object.entries(blockProducts)
             .filter(([, qty]) => qty > 0)
-            .map(([productId, qty]) => ({
+            .map(([productId, qty], i) => ({
               publisherProductId: productId,
               quantity: String(qty),
-              priority: 'Main' as const,
+              priority: i === 0 ? 'Main' : 'Sub',
             })),
         }));
       } else {
         // Regular offers: single sequence entry
         const products = Object.entries(row.products)
           .filter(([, qty]) => qty > 0)
-          .map(([productId, qty]) => ({
+          .map(([productId, qty], i) => ({
             publisherProductId: productId,
             quantity: qty,
-            priority: 'Main' as const,
+            priority: i === 0 ? 'Main' : 'Sub',
           }));
         productsSequence = [{ index: 1, products }];
       }
