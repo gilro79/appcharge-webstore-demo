@@ -21,43 +21,13 @@ import dashboardSettingsRoutes from './routes/dashboard/settings.js';
 import dashboardAppchargeProxyRoutes from './routes/dashboard/appcharge-proxy.js';
 
 // ─── Stores (exported for route handlers) ───
-// Declared with `let` so they can be reassigned to MongoStore instances.
-export let playerStore: Store<Player> | import('./store/MongoStore.js').MongoStore<Player>;
-export let tierStore: Store<Tier> | import('./store/MongoStore.js').MongoStore<Tier>;
-export let eventStore: Store<AppchargeEvent> | import('./store/MongoStore.js').MongoStore<AppchargeEvent>;
-export let logStore: Store<ApiLogEntry> | import('./store/MongoStore.js').MongoStore<ApiLogEntry>;
-export let settingsStore: Store<AppSettings> | import('./store/MongoStore.js').MongoStore<AppSettings>;
+export const playerStore = new Store<Player>('players');
+export const tierStore = new Store<Tier>('tiers');
+export const eventStore = new Store<AppchargeEvent>('events');
+export const logStore = new Store<ApiLogEntry>('logs');
+export const settingsStore = new Store<AppSettings>('settings');
 
 async function bootstrap() {
-  const mongoUri = process.env.MONGODB_URI;
-
-  if (mongoUri) {
-    // ─── MongoDB mode ───
-    const { connectMongo, MongoStore } = await import('./store/MongoStore.js');
-    await connectMongo(mongoUri);
-
-    const ps = new MongoStore<Player>('players');
-    const ts = new MongoStore<Tier>('tiers');
-    const es = new MongoStore<AppchargeEvent>('events');
-    const ls = new MongoStore<ApiLogEntry>('logs');
-    const ss = new MongoStore<AppSettings>('settings');
-
-    // Load existing data from MongoDB into memory
-    await Promise.all([ps.init(), ts.init(), es.init(), ls.init(), ss.init()]);
-
-    playerStore = ps;
-    tierStore = ts;
-    eventStore = es;
-    logStore = ls;
-    settingsStore = ss;
-  } else {
-    // ─── JSON file mode (local dev) ───
-    playerStore = new Store<Player>('players', true);
-    tierStore = new Store<Tier>('tiers', true);
-    eventStore = new Store<AppchargeEvent>('events');
-    logStore = new Store<ApiLogEntry>('logs');
-    settingsStore = new Store<AppSettings>('settings', true);
-  }
 
   // Load persisted settings (or seed defaults)
   const { initSettings } = await import('./routes/dashboard/settings.js');
