@@ -633,7 +633,7 @@ export default function PersonalizationPage() {
                             </button>
                           </td>
                           {/* Offer Design */}
-                          {designExpanded && (
+                          {designExpanded ? (
                             <td className="px-3 py-2">
                               <select
                                 value={selectedRolling?.offerDesignId || ''}
@@ -649,6 +649,8 @@ export default function PersonalizationPage() {
                                 ))}
                               </select>
                             </td>
+                          ) : (
+                            <td className="px-3 py-2" />
                           )}
                           {/* Badge */}
                           {designExpanded && (
@@ -733,14 +735,17 @@ export default function PersonalizationPage() {
                             <td className="px-3 py-2" />
                             {/* Toggle — empty */}
                             <td className="px-3 py-2" />
-                            {/* Design — empty */}
-                            {designExpanded && <td className="px-3 py-2" />}
-                            {/* Badge — empty */}
-                            {designExpanded && <td className="px-3 py-2" />}
-                            {/* Price Discount — empty */}
-                            {designExpanded && <td className="px-3 py-2" />}
-                            {/* Product Sale — empty */}
-                            {designExpanded && <td className="px-3 py-2" />}
+                            {/* Design columns — empty placeholder(s) */}
+                            {designExpanded ? (
+                              <>
+                                <td className="px-3 py-2" />
+                                <td className="px-3 py-2" />
+                                <td className="px-3 py-2" />
+                                <td className="px-3 py-2" />
+                              </>
+                            ) : (
+                              <td className="px-3 py-2" />
+                            )}
                             {/* Product quantity columns */}
                             {tier.productColumns.map((col) => {
                               const val = blockProducts[col] ?? 0;
@@ -809,7 +814,7 @@ export default function PersonalizationPage() {
                           </button>
                         </td>
                         {/* Offer Design dropdown */}
-                        {designExpanded && (
+                        {designExpanded ? (
                           <td className="px-3 py-2">
                             <select
                               value={offer.offerDesignId}
@@ -824,6 +829,8 @@ export default function PersonalizationPage() {
                               ))}
                             </select>
                           </td>
+                        ) : (
+                          <td className="px-3 py-2" />
                         )}
                         {/* Badge dropdown */}
                         {designExpanded && (
