@@ -19,6 +19,7 @@ export interface TierOfferRow {
   offerType: OfferType;
   enabled: boolean;
   offerDesignId: string;
+  badgeId?: string;
   priceInUsdCents?: number;
   products: Record<string, number>;
   /** Rolling offers only: number of sub-offer blocks from the API */
@@ -27,6 +28,9 @@ export interface TierOfferRow {
   subOfferProducts?: Record<string, number>[];
   /** Rolling offers only: per-block price in USD cents */
   subOfferPrices?: number[];
+  priceDiscount?: number;
+  productSale?: number;
+  productSaleType?: 'percentage' | 'multiplier' | 'fixed_amount';
 }
 
 export interface Tier {
@@ -72,6 +76,9 @@ export interface PersonalizationOffer {
   productsSequence: OfferProductSequence[];
   offerDesignOverride?: { offerDesignId: string };
   dynamicOfferUi?: { offerDesignId: string };
+  badges?: { publisherBadgeId: string }[];
+  priceDiscount?: { discount: number; type: string };
+  productSale?: { sale: number; type: string };
 }
 
 export interface Balance {

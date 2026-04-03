@@ -68,6 +68,18 @@ router.post('/', (req, res) => {
         offer.offerDesignOverride = { offerDesignId: row.offerDesignId };
       }
 
+      if (row.badgeId) {
+        offer.badges = [{ publisherBadgeId: row.badgeId }];
+      }
+
+      if (row.priceDiscount && row.priceDiscount > 0) {
+        offer.priceDiscount = { discount: row.priceDiscount, type: 'percentage' };
+      }
+
+      if (row.productSale && row.productSale > 0) {
+        offer.productSale = { sale: row.productSale, type: row.productSaleType || 'percentage' };
+      }
+
       return offer;
     });
 

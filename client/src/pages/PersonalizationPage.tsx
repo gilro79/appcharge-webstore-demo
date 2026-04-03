@@ -16,6 +16,11 @@ interface OfferDesign {
   offerUiType: string;
 }
 
+interface Badge {
+  name: string;
+  publisherBadgeId: string;
+}
+
 export default function PersonalizationPage() {
   const [subTab, setSubTab] = useState<SubTab>('offers');
 
@@ -41,6 +46,12 @@ export default function PersonalizationPage() {
   // ─── Offer Designs state ───
   const [offerDesigns, setOfferDesigns] = useState<OfferDesign[]>([]);
 
+  // ─── Badges state ───
+  const [badges, setBadges] = useState<Badge[]>([]);
+
+  // ─── Design section collapse ───
+  const [designExpanded, setDesignExpanded] = useState(true);
+
   // ─── Pricing Points state ───
   const [pricePoints, setPricePoints] = useState<PricePoint[]>([]);
   const [loadingPP, setLoadingPP] = useState(false);
@@ -56,6 +67,7 @@ export default function PersonalizationPage() {
       }
     });
     api.getOfferDesigns().then(setOfferDesigns).catch(() => {});
+    api.getBadges().then(setBadges).catch(() => {});
   }, []);
 
   // Load selected tier
@@ -293,6 +305,42 @@ export default function PersonalizationPage() {
     setDirty(true);
   };
 
+  const updateRollingBadge = (badgeId: string) => {
+    if (!tier || !selectedRolling) return;
+    const offers = tier.offers.map((o) => {
+      if (o.publisherOfferId === selectedRolling.publisherOfferId) {
+        return { ...o, badgeId: badgeId || undefined };
+      }
+      return o;
+    });
+    setTier({ ...tier, offers });
+    setDirty(true);
+  };
+
+  const updateRollingPriceDiscount = (value: number) => {
+    if (!tier || !selectedRolling) return;
+    const offers = tier.offers.map((o) => {
+      if (o.publisherOfferId === selectedRolling.publisherOfferId) {
+        return { ...o, priceDiscount: value || undefined };
+      }
+      return o;
+    });
+    setTier({ ...tier, offers });
+    setDirty(true);
+  };
+
+  const updateRollingProductSale = (sale: number, type: string) => {
+    if (!tier || !selectedRolling) return;
+    const offers = tier.offers.map((o) => {
+      if (o.publisherOfferId === selectedRolling.publisherOfferId) {
+        return { ...o, productSale: sale || undefined, productSaleType: (type as TierOfferRow['productSaleType']) || 'percentage' };
+      }
+      return o;
+    });
+    setTier({ ...tier, offers });
+    setDirty(true);
+  };
+
   const updateSubOfferProduct = (blockIdx: number, productId: string, quantity: number) => {
     if (!tier || !selectedRolling) return;
     const offers = tier.offers.map((o) => {
@@ -310,7 +358,7 @@ export default function PersonalizationPage() {
     [pricePoints],
   );
 
-  const colCount = 5 + (tier?.productColumns.length || 0);
+  const colCount = 4 + (designExpanded ? 4 : 0) + (tier?.productColumns.length || 0);
 
   return (
     <div className="space-y-6">
@@ -489,13 +537,39 @@ export default function PersonalizationPage() {
                         Type{sortIndicator('type')}
                       </th>
                       <th className="px-3 py-2 text-center font-medium text-gray-600 whitespace-nowrap">On/Off</th>
-                      <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Offer Design</th>
+                      <th
+                        className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer select-none hover:text-gray-900"
+                        colSpan={designExpanded ? 4 : 1}
+                        onClick={() => setDesignExpanded(!designExpanded)}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <svg className={`w-3 h-3 transition-transform ${designExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Design
+                        </span>
+                      </th>
                       {tier.productColumns.map((col) => (
                         <th key={col} className="px-3 py-2 text-center font-medium text-gray-600 whitespace-nowrap">
                           <span className="text-xs">{col}</span>
                         </th>
                       ))}
                     </tr>
+                    {designExpanded && (
+                      <tr>
+                        <th className="px-3 py-1" />
+                        <th className="px-3 py-1" />
+                        <th className="px-3 py-1" />
+                        <th className="px-3 py-1" />
+                        <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Offer Design</th>
+                        <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Badge</th>
+                        <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Price Discount</th>
+                        <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Product Sale</th>
+                        {tier.productColumns.map((col) => (
+                          <th key={col} className="px-3 py-1" />
+                        ))}
+                      </tr>
+                    )}
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
 
@@ -559,21 +633,79 @@ export default function PersonalizationPage() {
                             </button>
                           </td>
                           {/* Offer Design */}
-                          <td className="px-3 py-2">
-                            <select
-                              value={selectedRolling?.offerDesignId || ''}
-                              onChange={(e) => updateRollingDesign(e.target.value)}
-                              disabled={!selectedRolling}
-                              className="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                            >
-                              {getDesignsForType('RollingOffer').length === 0 && selectedRolling && (
-                                <option value={selectedRolling.offerDesignId}>{selectedRolling.offerDesignId}</option>
-                              )}
-                              {getDesignsForType('RollingOffer').map((d) => (
-                                <option key={d.externalId} value={d.externalId}>{d.name}</option>
-                              ))}
-                            </select>
-                          </td>
+                          {designExpanded && (
+                            <td className="px-3 py-2">
+                              <select
+                                value={selectedRolling?.offerDesignId || ''}
+                                onChange={(e) => updateRollingDesign(e.target.value)}
+                                disabled={!selectedRolling}
+                                className="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                              >
+                                {getDesignsForType('RollingOffer').length === 0 && selectedRolling && (
+                                  <option value={selectedRolling.offerDesignId}>{selectedRolling.offerDesignId}</option>
+                                )}
+                                {getDesignsForType('RollingOffer').map((d) => (
+                                  <option key={d.externalId} value={d.externalId}>{d.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
+                          {/* Badge */}
+                          {designExpanded && (
+                            <td className="px-3 py-2">
+                              <select
+                                value={selectedRolling?.badgeId || ''}
+                                onChange={(e) => updateRollingBadge(e.target.value)}
+                                disabled={!selectedRolling}
+                                className="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                              >
+                                <option value="">None</option>
+                                {badges.map((b) => (
+                                  <option key={b.publisherBadgeId} value={b.publisherBadgeId}>{b.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
+                          {/* Price Discount */}
+                          {designExpanded && (
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min={0}
+                                value={selectedRolling?.priceDiscount ?? ''}
+                                onChange={(e) => updateRollingPriceDiscount(parseFloat(e.target.value) || 0)}
+                                disabled={!selectedRolling}
+                                placeholder="%"
+                                className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </td>
+                          )}
+                          {/* Product Sale */}
+                          {designExpanded && (
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={selectedRolling?.productSale ?? ''}
+                                  onChange={(e) => updateRollingProductSale(parseFloat(e.target.value) || 0, selectedRolling?.productSaleType || 'percentage')}
+                                  disabled={!selectedRolling}
+                                  placeholder="0"
+                                  className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <select
+                                  value={selectedRolling?.productSaleType || 'percentage'}
+                                  onChange={(e) => updateRollingProductSale(selectedRolling?.productSale || 0, e.target.value)}
+                                  disabled={!selectedRolling}
+                                  className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                >
+                                  <option value="percentage">%</option>
+                                  <option value="multiplier">x</option>
+                                  <option value="fixed_amount">$</option>
+                                </select>
+                              </div>
+                            </td>
+                          )}
                           {/* Product columns — empty for main row, sub-offers have them */}
                           {tier.productColumns.map((col) => (
                             <td key={col} className="px-3 py-2 text-center text-gray-300 text-xs">
@@ -602,7 +734,13 @@ export default function PersonalizationPage() {
                             {/* Toggle — empty */}
                             <td className="px-3 py-2" />
                             {/* Design — empty */}
-                            <td className="px-3 py-2" />
+                            {designExpanded && <td className="px-3 py-2" />}
+                            {/* Badge — empty */}
+                            {designExpanded && <td className="px-3 py-2" />}
+                            {/* Price Discount — empty */}
+                            {designExpanded && <td className="px-3 py-2" />}
+                            {/* Product Sale — empty */}
+                            {designExpanded && <td className="px-3 py-2" />}
                             {/* Product quantity columns */}
                             {tier.productColumns.map((col) => {
                               const val = blockProducts[col] ?? 0;
@@ -671,20 +809,74 @@ export default function PersonalizationPage() {
                           </button>
                         </td>
                         {/* Offer Design dropdown */}
-                        <td className="px-3 py-2">
-                          <select
-                            value={offer.offerDesignId}
-                            onChange={(e) => updateOffer(i, { offerDesignId: e.target.value })}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                          >
-                            {getDesignsForType(offer.offerType).length === 0 && (
-                              <option value={offer.offerDesignId}>{offer.offerDesignId}</option>
-                            )}
-                            {getDesignsForType(offer.offerType).map((d) => (
-                              <option key={d.externalId} value={d.externalId}>{d.name}</option>
-                            ))}
-                          </select>
-                        </td>
+                        {designExpanded && (
+                          <td className="px-3 py-2">
+                            <select
+                              value={offer.offerDesignId}
+                              onChange={(e) => updateOffer(i, { offerDesignId: e.target.value })}
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                            >
+                              {getDesignsForType(offer.offerType).length === 0 && (
+                                <option value={offer.offerDesignId}>{offer.offerDesignId}</option>
+                              )}
+                              {getDesignsForType(offer.offerType).map((d) => (
+                                <option key={d.externalId} value={d.externalId}>{d.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+                        {/* Badge dropdown */}
+                        {designExpanded && (
+                          <td className="px-3 py-2">
+                            <select
+                              value={offer.badgeId || ''}
+                              onChange={(e) => updateOffer(i, { badgeId: e.target.value || undefined })}
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                            >
+                              <option value="">None</option>
+                              {badges.map((b) => (
+                                <option key={b.publisherBadgeId} value={b.publisherBadgeId}>{b.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+                        {/* Price Discount */}
+                        {designExpanded && (
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={offer.priceDiscount ?? ''}
+                              onChange={(e) => updateOffer(i, { priceDiscount: parseFloat(e.target.value) || undefined })}
+                              placeholder="%"
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </td>
+                        )}
+                        {/* Product Sale */}
+                        {designExpanded && (
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                value={offer.productSale ?? ''}
+                                onChange={(e) => updateOffer(i, { productSale: parseFloat(e.target.value) || undefined })}
+                                placeholder="0"
+                                className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <select
+                                value={offer.productSaleType || 'percentage'}
+                                onChange={(e) => updateOffer(i, { productSaleType: e.target.value as TierOfferRow['productSaleType'] })}
+                                className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                              >
+                                <option value="percentage">%</option>
+                                <option value="multiplier">x</option>
+                                <option value="fixed_amount">$</option>
+                              </select>
+                            </div>
+                          </td>
+                        )}
                         {/* Product quantity columns */}
                         {tier.productColumns.map((col) => {
                           const val = offer.products[col] ?? 0;
