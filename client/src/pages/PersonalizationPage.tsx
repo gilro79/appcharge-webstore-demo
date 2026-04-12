@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../hooks/api';
 import type { Tier, TierOfferRow, OfferType } from 'shared/types';
 import CreatePage from './CreatePage';
@@ -50,7 +50,16 @@ export default function PersonalizationPage() {
   const [badges, setBadges] = useState<Badge[]>([]);
 
   // ─── Design section collapse ───
-  const [designExpanded, setDesignExpanded] = useState(true);
+  const [designExpanded, setDesignExpanded] = useState(false);
+
+  // ─── Product add-dropdown refs ───
+  const productSelectRefs = useMemo(() => new Map<string, HTMLSelectElement>(), []);
+  const openProductDropdown = useCallback((key: string) => {
+    const el = productSelectRefs.get(key);
+    if (el) {
+      el.showPicker();
+    }
+  }, [productSelectRefs]);
 
   // ─── Pricing Points state ───
   const [pricePoints, setPricePoints] = useState<PricePoint[]>([]);
@@ -341,6 +350,14 @@ export default function PersonalizationPage() {
     setDirty(true);
   };
 
+  const removeOfferProduct = (offerIndex: number, productId: string) => {
+    updateOfferProduct(offerIndex, productId, 0);
+  };
+
+  const removeSubOfferProduct = (blockIdx: number, productId: string) => {
+    updateSubOfferProduct(blockIdx, productId, 0);
+  };
+
   const updateSubOfferProduct = (blockIdx: number, productId: string, quantity: number) => {
     if (!tier || !selectedRolling) return;
     const offers = tier.offers.map((o) => {
@@ -358,7 +375,7 @@ export default function PersonalizationPage() {
     [pricePoints],
   );
 
-  const colCount = 4 + (designExpanded ? 4 : 0) + (tier?.productColumns.length || 0);
+  const colCount = 5 + (designExpanded ? 4 : 0);
 
   return (
     <div className="space-y-6">
@@ -549,11 +566,7 @@ export default function PersonalizationPage() {
                           Design
                         </span>
                       </th>
-                      {tier.productColumns.map((col) => (
-                        <th key={col} className="px-3 py-2 text-center font-medium text-gray-600 whitespace-nowrap">
-                          <span className="text-xs">{col}</span>
-                        </th>
-                      ))}
+                      <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Products</th>
                     </tr>
                     {designExpanded && (
                       <tr>
@@ -565,9 +578,7 @@ export default function PersonalizationPage() {
                         <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Badge</th>
                         <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Price Discount</th>
                         <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Product Sale</th>
-                        {tier.productColumns.map((col) => (
-                          <th key={col} className="px-3 py-1" />
-                        ))}
+                        <th className="px-3 py-1" />
                       </tr>
                     )}
                   </thead>
@@ -708,12 +719,8 @@ export default function PersonalizationPage() {
                               </div>
                             </td>
                           )}
-                          {/* Product columns — empty for main row, sub-offers have them */}
-                          {tier.productColumns.map((col) => (
-                            <td key={col} className="px-3 py-2 text-center text-gray-300 text-xs">
-                              —
-                            </td>
-                          ))}
+                          {/* Products — configured per sub-block, not on main row */}
+                          <td className="px-3 py-2 text-center text-gray-300 text-xs">—</td>
                         </tr>
 
                         {/* ── Expanded sub-offer rows ── */}
@@ -746,21 +753,65 @@ export default function PersonalizationPage() {
                             ) : (
                               <td className="px-3 py-2" />
                             )}
-                            {/* Product quantity columns */}
-                            {tier.productColumns.map((col) => {
-                              const val = blockProducts[col] ?? 0;
-                              return (
-                                <td key={col} className={`px-1 py-1 text-center border-l border-gray-200 ${val > 0 ? 'bg-green-50' : ''}`}>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={val}
-                                    onChange={(e) => updateSubOfferProduct(blockIdx, col, parseInt(e.target.value) || 0)}
-                                    className="w-full bg-transparent text-sm text-center outline-none focus:ring-1 focus:ring-primary-500 rounded py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  />
-                                </td>
-                              );
-                            })}
+                            {/* Products cell */}
+                            <td className="px-3 py-2">
+                              {(() => {
+                                const key = `rolling-${blockIdx}`;
+                                const assignedProducts = Object.entries(blockProducts).filter(([, qty]) => qty > 0);
+                                const unassignedProducts = tier.productColumns.filter(col => (blockProducts[col] ?? 0) === 0);
+                                return (
+                                  <div className="flex items-center gap-2 flex-nowrap">
+                                    {assignedProducts.map(([productId, qty]) => (
+                                      <span key={productId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                        {productId}
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={qty}
+                                          onClick={(e) => e.stopPropagation()}
+                                          onChange={(e) => {
+                                            const v = parseInt(e.target.value);
+                                            if (!isNaN(v) && v > 0) updateSubOfferProduct(blockIdx, productId, v);
+                                          }}
+                                          className="w-12 border border-gray-300 rounded px-1 py-0 text-xs text-center bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                        <button
+                                          onClick={() => removeSubOfferProduct(blockIdx, productId)}
+                                          className="text-red-400 hover:text-red-600 text-xs font-bold leading-none"
+                                          title="Remove product"
+                                        >
+                                          &#10005;
+                                        </button>
+                                      </span>
+                                    ))}
+                                    {unassignedProducts.length > 0 && (
+                                      <>
+                                        <select
+                                          ref={(el) => { if (el) productSelectRefs.set(key, el); }}
+                                          value=""
+                                          onChange={(e) => {
+                                            if (e.target.value) updateSubOfferProduct(blockIdx, e.target.value, 1);
+                                          }}
+                                          className="sr-only"
+                                        >
+                                          <option value="">Select product...</option>
+                                          {unassignedProducts.map(col => (
+                                            <option key={col} value={col}>{col}</option>
+                                          ))}
+                                        </select>
+                                        <button
+                                          onClick={() => openProductDropdown(key)}
+                                          className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 text-sm leading-none flex-shrink-0"
+                                          title="Add product"
+                                        >
+                                          +
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </td>
                           </tr>
                         ))}
                       </>
@@ -884,21 +935,65 @@ export default function PersonalizationPage() {
                             </div>
                           </td>
                         )}
-                        {/* Product quantity columns */}
-                        {tier.productColumns.map((col) => {
-                          const val = offer.products[col] ?? 0;
-                          return (
-                            <td key={col} className={`px-1 py-1 text-center border-l border-gray-200 ${val > 0 ? 'bg-green-50' : ''}`}>
-                              <input
-                                type="number"
-                                min={0}
-                                value={val}
-                                onChange={(e) => updateOfferProduct(i, col, parseInt(e.target.value) || 0)}
-                                className="w-full bg-transparent text-sm text-center outline-none focus:ring-1 focus:ring-primary-500 rounded py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                            </td>
-                          );
-                        })}
+                        {/* Products cell */}
+                        <td className="px-3 py-2">
+                          {(() => {
+                            const key = `offer-${i}`;
+                            const assignedProducts = Object.entries(offer.products).filter(([, qty]) => qty > 0);
+                            const unassignedProducts = tier.productColumns.filter(col => (offer.products[col] ?? 0) === 0);
+                            return (
+                              <div className="flex items-center gap-2 flex-nowrap">
+                                {assignedProducts.map(([productId, qty]) => (
+                                  <span key={productId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                    {productId}
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={qty}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => {
+                                        const v = parseInt(e.target.value);
+                                        if (!isNaN(v) && v > 0) updateOfferProduct(i, productId, v);
+                                      }}
+                                      className="w-12 border border-gray-300 rounded px-1 py-0 text-xs text-center bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <button
+                                      onClick={() => removeOfferProduct(i, productId)}
+                                      className="text-red-400 hover:text-red-600 text-xs font-bold leading-none"
+                                      title="Remove product"
+                                    >
+                                      &#10005;
+                                    </button>
+                                  </span>
+                                ))}
+                                {unassignedProducts.length > 0 && (
+                                  <>
+                                    <select
+                                      ref={(el) => { if (el) productSelectRefs.set(key, el); }}
+                                      value=""
+                                      onChange={(e) => {
+                                        if (e.target.value) updateOfferProduct(i, e.target.value, 1);
+                                      }}
+                                      className="sr-only"
+                                    >
+                                      <option value="">Select product...</option>
+                                      {unassignedProducts.map(col => (
+                                        <option key={col} value={col}>{col}</option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      onClick={() => openProductDropdown(key)}
+                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 text-sm leading-none flex-shrink-0"
+                                      title="Add product"
+                                    >
+                                      +
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
