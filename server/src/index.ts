@@ -43,6 +43,9 @@ async function bootstrap() {
   // ─── Express App ───
   const app = express();
 
+  // Trust proxy so secure cookies and x-forwarded-proto work behind Render's TLS termination
+  app.set('trust proxy', 1);
+
   app.use(cors());
   app.use(express.json());
   app.use(sessionMiddleware);

@@ -4,16 +4,21 @@ import { config } from '../config.js';
 
 const router = Router();
 
-const REDIRECT_URI = `http://localhost:${config.port}/api/auth/google/callback`;
-const CLIENT_ORIGIN = config.nodeEnv === 'production' ? '' : config.clientUrl;
+function getRedirectUri(req: import('express').Request) {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  return `${protocol}://${host}/api/auth/google/callback`;
+}
 
-function getOAuthClient() {
-  return new OAuth2Client(config.googleClientId, config.googleClientSecret, REDIRECT_URI);
+function getClientOrigin(req: import('express').Request) {
+  if (config.nodeEnv === 'production') return '';
+  return config.clientUrl;
 }
 
 // Redirect to Google consent screen
-router.get('/google', (_req, res) => {
-  const client = getOAuthClient();
+router.get('/google', (req, res) => {
+  const redirectUri = getRedirectUri(req);
+  const client = new OAuth2Client(config.googleClientId, config.googleClientSecret, redirectUri);
   const url = client.generateAuthUrl({
     access_type: 'offline',
     scope: ['openid', 'email', 'profile'],
@@ -25,14 +30,16 @@ router.get('/google', (_req, res) => {
 
 // Google OAuth callback
 router.get('/google/callback', async (req, res) => {
+  const clientOrigin = getClientOrigin(req);
   const code = req.query.code as string | undefined;
   if (!code) {
-    res.redirect(`${CLIENT_ORIGIN}/?error=missing_code`);
+    res.redirect(`${clientOrigin}/?error=missing_code`);
     return;
   }
 
   try {
-    const client = getOAuthClient();
+    const redirectUri = getRedirectUri(req);
+    const client = new OAuth2Client(config.googleClientId, config.googleClientSecret, redirectUri);
     const { tokens } = await client.getToken(code);
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token!,
@@ -41,13 +48,13 @@ router.get('/google/callback', async (req, res) => {
 
     const payload = ticket.getPayload();
     if (!payload) {
-      res.redirect(`${CLIENT_ORIGIN}/?error=invalid_token`);
+      res.redirect(`${clientOrigin}/?error=invalid_token`);
       return;
     }
 
     // Enforce @appcharge.com domain
     if (payload.hd !== 'appcharge.com') {
-      res.redirect(`${CLIENT_ORIGIN}/?error=unauthorized_domain`);
+      res.redirect(`${clientOrigin}/?error=unauthorized_domain`);
       return;
     }
 
@@ -57,10 +64,10 @@ router.get('/google/callback', async (req, res) => {
       picture: payload.picture || '',
     };
 
-    res.redirect(`${CLIENT_ORIGIN}/`);
+    res.redirect(`${clientOrigin}/`);
   } catch (err) {
     console.error('OAuth callback error:', err);
-    res.redirect(`${CLIENT_ORIGIN}/?error=auth_failed`);
+    res.redirect(`${clientOrigin}/?error=auth_failed`);
   }
 });
 
