@@ -62,7 +62,7 @@ export default function ApiLogPanel() {
               tab === 'apis' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
-            APIs ({logs.length})
+            APIs ({logs.filter((l) => l.category !== 'event').length})
           </button>
           <button
             onClick={() => setTab('events')}
@@ -94,10 +94,10 @@ export default function ApiLogPanel() {
       {/* APIs tab */}
       {tab === 'apis' && (
         <div className="flex-1 overflow-y-auto">
-          {logs.length === 0 && (
+          {logs.filter((l) => l.category !== 'event').length === 0 && (
             <p className="text-center text-gray-500 text-sm mt-8">No API calls yet</p>
           )}
-          {logs.map((log) => (
+          {logs.filter((l) => l.category !== 'event').map((log) => (
             <div
               key={log.id}
               className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
