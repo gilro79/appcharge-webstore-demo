@@ -2,6 +2,58 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../hooks/api';
 import type { Tier, TierOfferRow, OfferType } from 'shared/types';
 import CreatePage from './CreatePage';
+import JsonViewer from '../components/logs/JsonViewer';
+
+function buildOfferJson(row: TierOfferRow): Record<string, unknown> {
+  let productsSequence;
+
+  if (row.offerType === 'RollingOffer' && row.subOfferProducts) {
+    productsSequence = row.subOfferProducts.map((blockProducts, idx) => ({
+      index: idx + 1,
+      products: Object.entries(blockProducts)
+        .filter(([, qty]) => qty > 0)
+        .map(([productId, qty], i) => ({
+          publisherProductId: productId,
+          quantity: String(qty),
+          priority: i === 0 ? 'Main' : 'Sub',
+        })),
+    }));
+  } else {
+    const products = Object.entries(row.products)
+      .filter(([, qty]) => qty > 0)
+      .map(([productId, qty], i) => ({
+        publisherProductId: productId,
+        quantity: qty,
+        priority: i === 0 ? 'Main' : 'Sub',
+      }));
+    productsSequence = [{ index: 1, products }];
+  }
+
+  const offer: Record<string, unknown> = {
+    publisherOfferId: row.publisherOfferId,
+    productsSequence,
+  };
+
+  if (row.offerType === 'RollingOffer' && row.offerDesignId) {
+    offer.dynamicOfferUi = { offerDesignId: row.offerDesignId };
+  } else if (row.offerDesignId && row.offerDesignId !== 'Default') {
+    offer.offerDesignOverride = { offerDesignId: row.offerDesignId };
+  }
+
+  if (row.badgeId) {
+    offer.badges = [{ publisherBadgeId: row.badgeId }];
+  }
+
+  if (row.priceDiscount && row.priceDiscount > 0) {
+    offer.priceDiscount = { discount: row.priceDiscount, type: 'percentage' };
+  }
+
+  if (row.productSale && row.productSale > 0) {
+    offer.productSale = { sale: row.productSale, type: row.productSaleType || 'percentage' };
+  }
+
+  return offer;
+}
 
 type SubTab = 'offers' | 'create' | 'pricing';
 
@@ -32,6 +84,7 @@ export default function PersonalizationPage() {
   const [message, setMessage] = useState('');
   const [dirty, setDirty] = useState(false);
   const [rollingExpanded, setRollingExpanded] = useState(false);
+  const [jsonPreviewOffer, setJsonPreviewOffer] = useState<TierOfferRow | null>(null);
 
   // Filters
   const [filterType, setFilterType] = useState<OfferType | ''>('');
@@ -375,7 +428,7 @@ export default function PersonalizationPage() {
     [pricePoints],
   );
 
-  const colCount = 5 + (designExpanded ? 4 : 0);
+  const colCount = 6 + (designExpanded ? 4 : 0);
 
   return (
     <div className="space-y-6">
@@ -567,6 +620,7 @@ export default function PersonalizationPage() {
                         </span>
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">Products</th>
+                      <th className="px-3 py-2 w-10" />
                     </tr>
                     {designExpanded && (
                       <tr>
@@ -578,6 +632,7 @@ export default function PersonalizationPage() {
                         <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Badge</th>
                         <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Price Discount</th>
                         <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Product Sale</th>
+                        <th className="px-3 py-1" />
                         <th className="px-3 py-1" />
                       </tr>
                     )}
@@ -721,6 +776,20 @@ export default function PersonalizationPage() {
                           )}
                           {/* Products — configured per sub-block, not on main row */}
                           <td className="px-3 py-2 text-center text-gray-300 text-xs">—</td>
+                          {/* JSON preview */}
+                          <td className="px-3 py-2 text-center">
+                            {selectedRolling && (
+                              <button
+                                onClick={() => setJsonPreviewOffer(selectedRolling)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                title="View JSON"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                              </button>
+                            )}
+                          </td>
                         </tr>
 
                         {/* ── Expanded sub-offer rows ── */}
@@ -812,6 +881,7 @@ export default function PersonalizationPage() {
                                 );
                               })()}
                             </td>
+                            <td className="px-3 py-2" />
                           </tr>
                         ))}
                       </>
@@ -994,6 +1064,18 @@ export default function PersonalizationPage() {
                             );
                           })()}
                         </td>
+                        {/* JSON preview */}
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            onClick={() => setJsonPreviewOffer(offer)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            title="View JSON"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                            </svg>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1001,6 +1083,28 @@ export default function PersonalizationPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* JSON Preview Modal */}
+      {jsonPreviewOffer && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setJsonPreviewOffer(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900">{jsonPreviewOffer.publisherOfferId}</h3>
+              <button
+                onClick={() => setJsonPreviewOffer(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <JsonViewer data={buildOfferJson(jsonPreviewOffer)} />
+            </div>
+          </div>
         </div>
       )}
 
