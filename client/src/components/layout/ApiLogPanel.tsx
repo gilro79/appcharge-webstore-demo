@@ -53,13 +53,13 @@ export default function ApiLogPanel() {
   );
 
   return (
-    <aside className="w-96 bg-gray-900 text-gray-100 flex flex-col min-h-screen border-l border-gray-700">
-      <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+    <aside className="w-96 bg-white text-gray-900 flex flex-col min-h-screen border-l border-gray-200">
+      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
         <div className="flex gap-1">
           <button
             onClick={() => setTab('apis')}
             className={`text-xs px-2.5 py-1 rounded transition-colors ${
-              tab === 'apis' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+              tab === 'apis' ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:text-gray-900'
             }`}
           >
             APIs ({logs.filter((l) => l.category !== 'event').length})
@@ -67,7 +67,7 @@ export default function ApiLogPanel() {
           <button
             onClick={() => setTab('events')}
             className={`text-xs px-2.5 py-1 rounded transition-colors ${
-              tab === 'events' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+              tab === 'events' ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:text-gray-900'
             }`}
           >
             Events ({events.length})
@@ -76,13 +76,13 @@ export default function ApiLogPanel() {
         <div className="flex gap-2">
           <button
             onClick={tab === 'apis' ? clearLogs : clearEvents}
-            className="text-xs text-gray-400 hover:text-white transition-colors"
+            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
           >
             Clear
           </button>
           <button
             onClick={() => setIsOpen(false)}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-gray-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -95,32 +95,32 @@ export default function ApiLogPanel() {
       {tab === 'apis' && (
         <div className="flex-1 overflow-y-auto">
           {logs.filter((l) => l.category !== 'event').length === 0 && (
-            <p className="text-center text-gray-500 text-sm mt-8">No API calls yet</p>
+            <p className="text-center text-gray-400 text-sm mt-8">No API calls yet</p>
           )}
           {logs.filter((l) => l.category !== 'event').map((log) => (
             <div
               key={log.id}
-              className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+              className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
             >
               <button
                 onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
                 className="w-full text-left p-3"
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${categoryColors[log.category] || 'bg-gray-600 text-gray-200'}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${categoryColors[log.category] || 'bg-gray-100 text-gray-600'}`}>
                     {log.category}
                   </span>
                   <span className="text-xs text-gray-400">
                     {log.direction === 'inbound' ? '\u2190' : '\u2192'}
                   </span>
-                  <span className={`text-xs font-mono ${log.responseStatus < 400 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span className={`text-xs font-mono ${log.responseStatus < 400 ? 'text-green-600' : 'text-red-600'}`}>
                     {log.responseStatus}
                   </span>
                 </div>
-                <div className="text-xs font-mono text-gray-300 overflow-x-auto whitespace-nowrap scrollbar-thin">
+                <div className="text-xs font-mono text-gray-700 overflow-x-auto whitespace-nowrap scrollbar-thin">
                   {log.method} {log.path}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-400 mt-1">
                   {new Date(log.timestamp).toLocaleTimeString()} · {log.durationMs}ms
                 </div>
               </button>
@@ -145,12 +145,12 @@ export default function ApiLogPanel() {
       {tab === 'events' && (
         <div className="flex-1 overflow-y-auto">
           {sortedEvents.length === 0 && (
-            <p className="text-center text-gray-500 text-sm mt-8">No events yet</p>
+            <p className="text-center text-gray-400 text-sm mt-8">No events yet</p>
           )}
           {sortedEvents.map((event) => (
             <div
               key={event.id}
-              className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+              className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
             >
               <button
                 onClick={() => setExpandedId(expandedId === event.id ? null : event.id)}
@@ -168,10 +168,10 @@ export default function ApiLogPanel() {
                     </span>
                   )}
                 </div>
-                <div className="text-xs font-mono text-gray-300">
+                <div className="text-xs font-mono text-gray-700">
                   {event.type}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-400 mt-1">
                   {new Date(event.timestamp).toLocaleTimeString()}
                 </div>
               </button>

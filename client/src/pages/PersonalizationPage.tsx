@@ -1102,7 +1102,7 @@ export default function PersonalizationPage() {
               </button>
             </div>
             <div className="p-4">
-              <JsonViewer data={buildOfferJson(jsonPreviewOffer)} />
+              <JsonViewer data={buildOfferJson(jsonPreviewOffer)} copyable />
             </div>
           </div>
         </div>

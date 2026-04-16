@@ -449,7 +449,7 @@ function ApiSectionCard({
               {requestData ? (
                 <JsonViewer data={requestData} />
               ) : (
-                <div className="text-xs text-gray-400 italic bg-gray-950 rounded p-3">No request body (GET request)</div>
+                <div className="text-xs text-gray-400 italic bg-gray-50 border border-gray-200 rounded p-3">No request body (GET request)</div>
               )}
             </div>
 

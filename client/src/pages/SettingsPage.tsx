@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../hooks/api';
 
 interface Environment {
@@ -22,6 +22,13 @@ export default function SettingsPage() {
   // New env form
   const [newEnv, setNewEnv] = useState<Environment>({ name: '', publisherToken: '', webstoreUrl: '' });
   const [showNewEnv, setShowNewEnv] = useState(false);
+  const [copiedPath, setCopiedPath] = useState<string | null>(null);
+
+  const copyToClipboard = useCallback((text: string, path: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedPath(path);
+    setTimeout(() => setCopiedPath(null), 2000);
+  }, []);
 
   useEffect(() => {
     api.getSettings().then(setSettings).catch(() => {});
@@ -247,6 +254,12 @@ export default function SettingsPage() {
               <code className="text-sm bg-gray-100 px-3 py-1.5 rounded font-mono text-gray-800 flex-1">
                 {window.location.origin}{endpoint.path}
               </code>
+              <button
+                onClick={() => copyToClipboard(`${window.location.origin}${endpoint.path}`, endpoint.path)}
+                className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+              >
+                {copiedPath === endpoint.path ? 'Copied!' : 'Copy'}
+              </button>
             </div>
           ))}
         </div>
