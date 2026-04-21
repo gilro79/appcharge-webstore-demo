@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../config.js';
 
@@ -17,6 +18,9 @@ function getClientOrigin(req: import('express').Request) {
 
 // Redirect to Google consent screen
 router.get('/google', (req, res) => {
+  const state = crypto.randomBytes(32).toString('hex');
+  req.session.oauthState = state;
+
   const redirectUri = getRedirectUri(req);
   const client = new OAuth2Client(config.googleClientId, config.googleClientSecret, redirectUri);
   const url = client.generateAuthUrl({
@@ -24,6 +28,7 @@ router.get('/google', (req, res) => {
     scope: ['openid', 'email', 'profile'],
     hd: 'appcharge.com',
     prompt: 'select_account',
+    state,
   });
   res.redirect(url);
 });
@@ -32,10 +37,18 @@ router.get('/google', (req, res) => {
 router.get('/google/callback', async (req, res) => {
   const clientOrigin = getClientOrigin(req);
   const code = req.query.code as string | undefined;
+  const state = req.query.state as string | undefined;
+
   if (!code) {
     res.redirect(`${clientOrigin}/?error=missing_code`);
     return;
   }
+
+  if (!state || state !== req.session.oauthState) {
+    res.redirect(`${clientOrigin}/?error=invalid_state`);
+    return;
+  }
+  delete req.session.oauthState;
 
   try {
     const redirectUri = getRedirectUri(req);
