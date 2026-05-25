@@ -69,4 +69,12 @@ export const api = {
   getPricePoints: () => request<any>('/appcharge/price-points'),
   createPricePoint: (priceInUsdCents: number) =>
     request<any>('/appcharge/price-points', { method: 'POST', body: JSON.stringify({ priceInUsdCents }) }),
+
+  // Game Auth (Game Redirect Login)
+  simulateGameAuth: (publisherPlayerId: string) =>
+    request<any>('/game-auth/simulate', { method: 'POST', body: JSON.stringify({ publisherPlayerId }) }),
+  getGameAuthSession: (accessToken: string) =>
+    request<any>(`/game-auth/session/${accessToken}`),
+  resolveGameAuth: (proofKey: string, token: string) =>
+    request<any>(`/game-auth/resolve?proofKey=${encodeURIComponent(proofKey)}&token=${encodeURIComponent(token)}`),
 };

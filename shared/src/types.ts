@@ -42,6 +42,18 @@ export interface Tier {
   offers: TierOfferRow[];
 }
 
+// ─── Game Auth (OTP / Game Redirect Login) ───
+
+export interface GameAuthInitRequest {
+  deviceType: string;
+  date: string;
+}
+
+export interface GameAuthInitResponse {
+  deeplink: string;
+  accessToken: string;
+}
+
 // ─── Auth (returned to Appcharge) ───
 
 export interface AuthRequest {
@@ -140,7 +152,7 @@ export interface AppchargeEvent {
 
 // ─── API Log ───
 
-export type ApiLogCategory = 'auth' | 'personalization' | 'award' | 'event' | 'refresh' | 'sync';
+export type ApiLogCategory = 'auth' | 'personalization' | 'award' | 'event' | 'refresh' | 'sync' | 'game-auth';
 
 export interface ApiLogEntry {
   id: string;

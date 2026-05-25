@@ -5,6 +5,7 @@ import { sseManager } from '../services/sseManager.js';
 import { logStore } from '../index.js';
 
 function categorize(path: string): ApiLogCategory {
+  if (path.includes('/game-auth')) return 'game-auth';
   if (path.includes('/auth')) return 'auth';
   if (path.includes('/personalization')) return 'personalization';
   if (path.includes('/award')) return 'award';

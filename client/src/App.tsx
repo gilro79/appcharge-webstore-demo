@@ -8,6 +8,8 @@ import PersonalizationPage from './pages/PersonalizationPage';
 import EventsPage from './pages/EventsPage';
 import ApiReferencePage from './pages/ApiReferencePage';
 import SettingsPage from './pages/SettingsPage';
+import GameAuthPage from './pages/GameAuthPage';
+import GameRedirectPage from './pages/GameRedirectPage';
 import LoginPage from './pages/LoginPage';
 
 export default function App() {
@@ -28,9 +30,11 @@ export default function App() {
   return (
     <ActivePlayerProvider>
       <Routes>
+        <Route path="/game-redirect" element={<GameRedirectPage />} />
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/players" element={<PlayersPage />} />
+          <Route path="/game-auth" element={<GameAuthPage />} />
           <Route path="/personalization" element={<PersonalizationPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/api-reference" element={<ApiReferencePage />} />

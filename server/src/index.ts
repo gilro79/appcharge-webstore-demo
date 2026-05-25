@@ -22,6 +22,8 @@ import dashboardEventRoutes from './routes/dashboard/events.js';
 import dashboardLogRoutes from './routes/dashboard/logs.js';
 import dashboardSettingsRoutes from './routes/dashboard/settings.js';
 import dashboardAppchargeProxyRoutes from './routes/dashboard/appcharge-proxy.js';
+import gameAuthAppchargeRoutes from './routes/appcharge/game-auth.js';
+import dashboardGameAuthRoutes from './routes/dashboard/game-auth.js';
 
 // ─── Stores (exported for route handlers) ───
 export const playerStore = new Store<Player>('players');
@@ -63,6 +65,7 @@ async function bootstrap() {
   app.use('/api/appcharge/personalization', requestLogger, personalizationRoutes);
   app.use('/api/appcharge/award', requestLogger, awardRoutes);
   app.use('/api/appcharge/events', requestLogger, eventRoutes);
+  app.use('/api/appcharge/game-auth', requestLogger, gameAuthAppchargeRoutes);
 
   // Dashboard internal API (protected — requires authenticated session)
   app.use('/api/dashboard/players', requireAuth, dashboardPlayerRoutes);
@@ -72,6 +75,7 @@ async function bootstrap() {
   app.use('/api/dashboard/logs', requireAuth, dashboardLogRoutes);
   app.use('/api/dashboard/settings', requireAuth, dashboardSettingsRoutes);
   app.use('/api/dashboard/appcharge', requireAuth, dashboardAppchargeProxyRoutes);
+  app.use('/api/dashboard/game-auth', requireAuth, dashboardGameAuthRoutes);
 
   // ─── Serve React client in production ───
   if (config.nodeEnv === 'production') {
