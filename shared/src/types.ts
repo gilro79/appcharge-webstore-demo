@@ -52,6 +52,7 @@ export interface GameAuthInitRequest {
 export interface GameAuthInitResponse {
   deeplink: string;
   accessToken: string;
+  desktopAutoRedirect: boolean;
 }
 
 // ─── Auth (returned to Appcharge) ───

@@ -23,7 +23,7 @@ router.post('/', (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const deeplink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
 
-  const response: GameAuthInitResponse = { deeplink, accessToken };
+  const response: GameAuthInitResponse = { deeplink, accessToken, desktopAutoRedirect: true };
   res.json(response);
 });
 

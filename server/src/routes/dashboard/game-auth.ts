@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
-import { config } from '../../config.js';
 import { playerStore } from '../../index.js';
 
 const router = Router();
@@ -24,7 +23,7 @@ router.post('/simulate', (req, res) => {
   const accessToken = uuid();
   gameAuthSessions.set(accessToken, { publisherPlayerId });
 
-  const baseUrl = config.clientUrl;
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
   const deeplink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
 
   const simulatedRequest = {
@@ -35,6 +34,7 @@ router.post('/simulate', (req, res) => {
   const simulatedResponse = {
     deeplink,
     accessToken,
+    desktopAutoRedirect: true,
   };
 
   res.json({
