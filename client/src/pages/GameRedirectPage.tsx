@@ -1,41 +1,69 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../hooks/api';
+
+// Direct fetch helpers (no dashboard auth required)
+async function fetchPlayers() {
+  const res = await fetch('/api/appcharge/game-auth/players');
+  if (!res.ok) throw new Error('Failed to load players');
+  return res.json();
+}
+
+async function identifyPlayer(accessToken: string, publisherPlayerId: string) {
+  const res = await fetch('/api/appcharge/game-auth/identify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken, publisherPlayerId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to identify player');
+  }
+  return res.json();
+}
 
 export default function GameRedirectPage() {
   const [searchParams] = useSearchParams();
   const accessToken = searchParams.get('accessToken') || '';
-  const [session, setSession] = useState<any>(null);
-  const [settings, setSettings] = useState<any>(null);
+
+  const [players, setPlayers] = useState<any[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState('');
+  const [identified, setIdentified] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [identifying, setIdentifying] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
-      setError('No accessToken provided');
+      setError('No accessToken provided in URL');
       setLoading(false);
       return;
     }
 
-    Promise.all([
-      api.getGameAuthSession(accessToken),
-      api.getSettings(),
-    ])
-      .then(([sessionData, settingsData]) => {
-        setSession(sessionData);
-        setSettings(settingsData);
+    fetchPlayers()
+      .then((data) => {
+        setPlayers(data);
+        if (data.length > 0) setSelectedPlayerId(data[0].publisherPlayerId);
       })
-      .catch((err) => {
-        setError(err.message || 'Failed to load session');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [accessToken]);
 
-  const webstoreUrl = settings?.appchargeWebstoreUrl || '';
+  const handleIdentify = async () => {
+    if (!selectedPlayerId) return;
+    setIdentifying(true);
+    try {
+      const result = await identifyPlayer(accessToken, selectedPlayerId);
+      setIdentified(result);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIdentifying(false);
+    }
+  };
+
+  const webstoreUrl = identified?.webstoreUrl || '';
   const storeLink = webstoreUrl
-    ? `${webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`}/login?proofKey=${session?.proofKey}&token=${accessToken}`
+    ? `${webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`}?proofKey=${identified?.proofKey}&token=${accessToken}`
     : '';
 
   if (loading) {
@@ -68,52 +96,78 @@ export default function GameRedirectPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-white">Game Authentication</h1>
-          <p className="text-gray-400 mt-1 text-sm">Simulated game page for redirect login</p>
+          <p className="text-gray-400 mt-1 text-sm">Simulated game page — identify the player to continue</p>
         </div>
 
-        {/* Player card */}
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-6">
-          {/* Player info */}
-          <div className="text-center">
-            <p className="text-gray-400 text-sm">Player identified</p>
-            <p className="text-xl font-bold text-white mt-1">{session?.playerName}</p>
-            <p className="text-gray-500 text-xs font-mono mt-1">{session?.publisherPlayerId}</p>
-          </div>
-
-          {/* Proof key */}
-          <div className="bg-gray-900 rounded-lg p-4 text-center">
-            <p className="text-gray-400 text-sm mb-2">Your player code</p>
-            <p className="text-4xl font-mono font-bold text-green-400 tracking-[0.3em]">
-              {session?.proofKey}
-            </p>
-          </div>
-
-          {/* Store link */}
-          {storeLink && (
-            <div className="space-y-3">
+          {!identified ? (
+            <>
+              {/* Player picker — simulates the game identifying the player */}
               <div>
-                <p className="text-gray-400 text-sm mb-2">Store link</p>
-                <code className="block bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs font-mono text-gray-300 break-all">
-                  {storeLink}
-                </code>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Select player (simulates game identifying the user)
+                </label>
+                <select
+                  value={selectedPlayerId}
+                  onChange={(e) => setSelectedPlayerId(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  {players.map((p: any) => (
+                    <option key={p.publisherPlayerId} value={p.publisherPlayerId}>
+                      {p.playerName} ({p.publisherPlayerId})
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
-                onClick={() => window.open(storeLink, '_blank')}
-                className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold"
+                onClick={handleIdentify}
+                disabled={identifying || !selectedPlayerId}
+                className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-50"
               >
-                Open Store
+                {identifying ? 'Identifying...' : 'Identify Player & Generate Code'}
               </button>
-            </div>
-          )}
+            </>
+          ) : (
+            <>
+              {/* Player identified — show proofKey and store link */}
+              <div className="text-center">
+                <p className="text-gray-400 text-sm">Player identified</p>
+                <p className="text-xl font-bold text-white mt-1">{identified.playerName}</p>
+              </div>
 
-          {!storeLink && (
-            <p className="text-gray-500 text-sm text-center">
-              No webstore URL configured. Set it in the dashboard Settings page.
-            </p>
+              <div className="bg-gray-900 rounded-lg p-4 text-center">
+                <p className="text-gray-400 text-sm mb-2">Your player code</p>
+                <p className="text-4xl font-mono font-bold text-green-400 tracking-[0.3em]">
+                  {identified.proofKey}
+                </p>
+              </div>
+
+              {storeLink ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-gray-400 text-sm mb-2">Store link</p>
+                    <code className="block bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs font-mono text-gray-300 break-all">
+                      {storeLink}
+                    </code>
+                  </div>
+                  <a
+                    href={storeLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold text-center"
+                  >
+                    Open Store
+                  </a>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm text-center">
+                  No webstore URL configured. Set it in the dashboard Settings page.
+                </p>
+              )}
+            </>
           )}
         </div>
 
-        {/* Footer */}
         <p className="text-gray-600 text-xs text-center mt-6">
           This is a simulated game page for the Game Redirect Login demo.
         </p>
