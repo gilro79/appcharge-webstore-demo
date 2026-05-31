@@ -245,6 +245,7 @@ export default function SettingsPage() {
         <div className="space-y-3">
           {[
             { label: 'Auth', path: '/api/appcharge/auth' },
+            { label: 'Game Auth', path: '/api/appcharge/game-auth' },
             { label: 'Personalization', path: '/api/appcharge/personalization' },
             { label: 'Award', path: '/api/appcharge/award' },
             { label: 'Events', path: '/api/appcharge/events' },
