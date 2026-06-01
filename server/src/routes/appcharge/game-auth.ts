@@ -10,7 +10,7 @@ const router = Router();
 /**
  * POST /api/appcharge/game-auth
  * Initiate Game Auth Callback — called by Appcharge.
- * Receives { deviceType, date }, returns { deeplink, accessToken }.
+ * Receives { deviceType, date }, returns { deepLink, accessToken }.
  */
 router.post('/', (req, res) => {
   const body = req.body as GameAuthInitRequest;
@@ -19,11 +19,11 @@ router.post('/', (req, res) => {
   // Store the session so the auth endpoint can validate later
   gameAuthSessions.set(accessToken, { publisherPlayerId: '' });
 
-  // Derive deeplink base URL from the incoming request (works behind Render proxy)
+  // Derive deepLink base URL from the incoming request (works behind Render proxy)
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const deeplink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
+  const deepLink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
 
-  const response: GameAuthInitResponse = { deeplink, accessToken, desktopAutoRedirect: true };
+  const response: GameAuthInitResponse = { deepLink, accessToken, desktopAutoRedirect: true };
   res.json(response);
 });
 

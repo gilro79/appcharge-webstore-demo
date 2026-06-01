@@ -24,7 +24,7 @@ router.post('/simulate', (req, res) => {
   gameAuthSessions.set(accessToken, { publisherPlayerId });
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const deeplink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
+  const deepLink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
 
   const simulatedRequest = {
     deviceType: 'desktop',
@@ -32,7 +32,7 @@ router.post('/simulate', (req, res) => {
   };
 
   const simulatedResponse = {
-    deeplink,
+    deepLink,
     accessToken,
     desktopAutoRedirect: true,
   };
@@ -41,7 +41,7 @@ router.post('/simulate', (req, res) => {
     request: simulatedRequest,
     response: simulatedResponse,
     accessToken,
-    deeplink,
+    deepLink,
   });
 });
 

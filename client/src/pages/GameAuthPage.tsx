@@ -138,11 +138,11 @@ export default function GameAuthPage() {
           <div className="mb-4">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Deeplink</h3>
             <code className="block bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs font-mono break-all">
-              {flowData.deeplink}
+              {flowData.deepLink}
             </code>
           </div>
           <button
-            onClick={() => window.open(flowData.deeplink, '_blank')}
+            onClick={() => window.open(flowData.deepLink, '_blank')}
             className="inline-flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
