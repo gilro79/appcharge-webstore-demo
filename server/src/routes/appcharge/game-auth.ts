@@ -17,7 +17,7 @@ router.post('/', (req, res) => {
   const accessToken = uuid();
 
   // Store the session so the auth endpoint can validate later
-  gameAuthSessions.set(accessToken, { publisherPlayerId: '' });
+  gameAuthSessions.set(accessToken, { publisherPlayerId: '', initiateType: 'in-app' });
 
   // Derive deepLink base URL from the incoming request (works behind Render proxy)
   const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -25,6 +25,29 @@ router.post('/', (req, res) => {
 
   const response: GameAuthInitResponse = { deepLink, accessToken, desktopAutoRedirect: true };
   res.json(response);
+});
+
+/**
+ * GET /api/appcharge/game-auth/session-info/:accessToken
+ * Returns { initiateType, publisherPlayerId, playerName } so the game-redirect page
+ * knows how to behave and who the player is. Unprotected.
+ */
+router.get('/session-info/:accessToken', (req, res) => {
+  const { accessToken } = req.params;
+  const session = gameAuthSessions.get(accessToken);
+
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+
+  const player = playerStore.findBy((p) => p.publisherPlayerId === session.publisherPlayerId);
+
+  res.json({
+    initiateType: session.initiateType,
+    publisherPlayerId: session.publisherPlayerId,
+    playerName: player?.playerName || 'Unknown Player',
+  });
 });
 
 /**
@@ -63,9 +86,12 @@ router.post('/identify', (req, res) => {
     return;
   }
 
-  // Store the player mapping and generate a 6-digit proofKey
+  // Store the player mapping and generate proofKey
+  // 4-digit for QR mode, 6-digit for auto-redirect and in-app
   session.publisherPlayerId = publisherPlayerId;
-  session.proofKey = String(Math.floor(100000 + Math.random() * 900000));
+  session.proofKey = session.initiateType === 'qr'
+    ? String(Math.floor(1000 + Math.random() * 9000))
+    : String(Math.floor(100000 + Math.random() * 900000));
 
   const player = playerStore.findBy((p) => p.publisherPlayerId === publisherPlayerId);
 
@@ -73,6 +99,7 @@ router.post('/identify', (req, res) => {
     proofKey: session.proofKey,
     playerName: player?.playerName || 'Unknown Player',
     webstoreUrl: settings.appchargeWebstoreUrl,
+    initiateType: session.initiateType,
   });
 });
 

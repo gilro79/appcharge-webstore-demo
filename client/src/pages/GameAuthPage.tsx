@@ -6,6 +6,7 @@ export default function GameAuthPage() {
   const { players } = useActivePlayer();
   const [settings, setSettings] = useState<any>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
+  const [initiateType, setInitiateType] = useState<'qr' | 'auto-redirect' | 'in-app'>('qr');
   const [flowData, setFlowData] = useState<any>(null);
   const [resolveData, setResolveData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,7 @@ export default function GameAuthPage() {
     setLoading(true);
     setResolveData(null);
     try {
-      const data = await api.simulateGameAuth(selectedPlayerId);
+      const data = await api.simulateGameAuth(selectedPlayerId, initiateType);
       setFlowData(data);
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -73,8 +74,8 @@ export default function GameAuthPage() {
       {/* Player picker + Start */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Start Simulation</h2>
-        <div className="flex items-end gap-4">
-          <div className="flex-1">
+        <div className="space-y-4">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select Player</label>
             <select
               value={selectedPlayerId}
@@ -88,13 +89,41 @@ export default function GameAuthPage() {
               ))}
             </select>
           </div>
-          <button
-            onClick={handleStartFlow}
-            disabled={loading || !selectedPlayerId}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50"
-          >
-            {loading ? 'Starting...' : 'Start Flow'}
-          </button>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Initiate Type</label>
+            <div className="flex gap-2">
+              {([
+                { value: 'qr', label: 'QR Code', desc: 'Player scans QR, types 4-digit code' },
+                { value: 'auto-redirect', label: 'Auto Redirect to Store', desc: 'Seamless two-redirect flow' },
+                { value: 'in-app', label: 'In-App Redirect', desc: 'Player stays in app, clicks to return' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setInitiateType(opt.value)}
+                  className={`flex-1 text-left border rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    initiateType === opt.value
+                      ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
+                >
+                  <span className="font-medium block">{opt.label}</span>
+                  <span className="text-xs text-gray-500 block mt-0.5">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={handleStartFlow}
+              disabled={loading || !selectedPlayerId}
+              className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {loading ? 'Starting...' : 'Start Flow'}
+            </button>
+          </div>
         </div>
       </div>
 

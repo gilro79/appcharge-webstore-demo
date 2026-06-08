@@ -4,8 +4,14 @@ import { playerStore } from '../../index.js';
 
 const router = Router();
 
-// In-memory map: accessToken -> { publisherPlayerId, proofKey? }
-const gameAuthSessions = new Map<string, { publisherPlayerId: string; proofKey?: string }>();
+type InitiateType = 'qr' | 'auto-redirect' | 'in-app';
+
+// In-memory map: accessToken -> { publisherPlayerId, proofKey?, initiateType }
+const gameAuthSessions = new Map<string, {
+  publisherPlayerId: string;
+  proofKey?: string;
+  initiateType: InitiateType;
+}>();
 
 /**
  * POST /api/dashboard/game-auth/simulate
@@ -13,7 +19,10 @@ const gameAuthSessions = new Map<string, { publisherPlayerId: string; proofKey?:
  * Receives { publisherPlayerId }, generates an accessToken, stores the mapping.
  */
 router.post('/simulate', (req, res) => {
-  const { publisherPlayerId } = req.body as { publisherPlayerId: string };
+  const { publisherPlayerId, initiateType = 'in-app' } = req.body as {
+    publisherPlayerId: string;
+    initiateType?: InitiateType;
+  };
 
   if (!publisherPlayerId) {
     res.status(400).json({ error: 'Missing publisherPlayerId' });
@@ -21,10 +30,12 @@ router.post('/simulate', (req, res) => {
   }
 
   const accessToken = uuid();
-  gameAuthSessions.set(accessToken, { publisherPlayerId });
+  gameAuthSessions.set(accessToken, { publisherPlayerId, initiateType });
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const deepLink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
+
+  const desktopAutoRedirect = initiateType !== 'qr';
 
   const simulatedRequest = {
     deviceType: 'desktop',
@@ -34,7 +45,7 @@ router.post('/simulate', (req, res) => {
   const simulatedResponse = {
     deepLink,
     accessToken,
-    desktopAutoRedirect: true,
+    desktopAutoRedirect,
   };
 
   res.json({
