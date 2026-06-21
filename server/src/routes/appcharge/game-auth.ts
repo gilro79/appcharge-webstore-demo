@@ -101,10 +101,17 @@ router.post('/identify', (req, res) => {
 
   const player = playerStore.findBy((p) => p.publisherPlayerId === publisherPlayerId);
 
+  // Use the webstore URL from settings, falling back to the active environment
+  let webstoreUrl = settings.appchargeWebstoreUrl;
+  if (!webstoreUrl) {
+    const activeEnv = settings.environments.find((e) => e.name === settings.activeEnvName);
+    if (activeEnv) webstoreUrl = activeEnv.webstoreUrl;
+  }
+
   res.json({
     proofKey: session.proofKey,
     playerName: player?.playerName || 'Unknown Player',
-    webstoreUrl: settings.appchargeWebstoreUrl,
+    webstoreUrl,
     initiateType: session.initiateType,
   });
 });

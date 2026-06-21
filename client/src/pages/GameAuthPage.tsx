@@ -88,6 +88,11 @@ export default function GameAuthPage() {
                 </option>
               ))}
             </select>
+            {initiateType === 'auto-redirect' && (
+              <p className="text-xs text-primary-600 mt-1">
+                This player will be automatically identified and redirected back to the store.
+              </p>
+            )}
           </div>
 
           <div>

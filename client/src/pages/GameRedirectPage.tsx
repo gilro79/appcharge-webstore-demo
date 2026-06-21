@@ -92,7 +92,10 @@ export default function GameRedirectPage() {
     if (initiateType !== 'auto-redirect' || !identified) return;
 
     const webstoreUrl = identified.webstoreUrl;
-    if (!webstoreUrl) return;
+    if (!webstoreUrl) {
+      setError('No webstore URL configured. Set it in the dashboard Settings page.');
+      return;
+    }
 
     const url = webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`;
     const redirectUrl = `${url}?proofKey=${encodeURIComponent(identified.proofKey)}&token=${encodeURIComponent(accessToken)}`;
