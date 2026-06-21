@@ -29,6 +29,13 @@ export function initSettings(): void {
   const stored = settingsStore.getById(SETTINGS_ID);
   if (stored) {
     settings = stored;
+    // Sync active environment values to top-level fields if they're missing
+    if (!settings.appchargeWebstoreUrl) {
+      const activeEnv = settings.environments.find((e) => e.name === settings.activeEnvName);
+      if (activeEnv?.webstoreUrl) {
+        settings.appchargeWebstoreUrl = activeEnv.webstoreUrl;
+      }
+    }
   } else {
     settingsStore.create(settings);
   }
@@ -107,6 +114,11 @@ router.post('/environments', (req, res) => {
     settings.environments[idx] = env;
   } else {
     settings.environments.push(env);
+  }
+  // If updating the active environment, sync its values to the top-level settings
+  if (env.name === settings.activeEnvName) {
+    settings.publisherToken = env.publisherToken;
+    settings.appchargeWebstoreUrl = env.webstoreUrl;
   }
   persistSettings();
   res.json({ saved: env.name, environments: settings.environments.map((e) => ({ ...e, publisherToken: `${e.publisherToken.slice(0, 8)}...` })) });
