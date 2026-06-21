@@ -28,7 +28,7 @@ router.post('/', (req, res) => {
 
   const desktopAutoRedirect = initiateType !== 'qr';
 
-  const response: GameAuthInitResponse = { deepLink, accessToken, desktopAutoRedirect };
+  const response: GameAuthInitResponse = { deepLink, accessToken, token: accessToken, desktopAutoRedirect };
   res.json(response);
 });
 

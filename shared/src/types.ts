@@ -53,6 +53,7 @@ export interface GameAuthInitRequest {
 export interface GameAuthInitResponse {
   deepLink: string;
   accessToken: string;
+  token: string;
   desktopAutoRedirect: boolean;
 }
 
