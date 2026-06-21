@@ -13,9 +13,11 @@ const gameAuthSessions = new Map<string, {
   initiateType: InitiateType;
 }>();
 
-// The active initiate type selected from the dashboard — used by the Appcharge game-auth endpoint
+// Active settings selected from the dashboard — used by the Appcharge game-auth endpoint
 let _activeInitiateType: InitiateType = 'qr';
+let _activePublisherPlayerId = '';
 function getActiveInitiateType(): InitiateType { return _activeInitiateType; }
+function getActivePublisherPlayerId(): string { return _activePublisherPlayerId; }
 
 /**
  * POST /api/dashboard/game-auth/simulate
@@ -35,6 +37,7 @@ router.post('/simulate', (req, res) => {
 
   const accessToken = uuid();
   _activeInitiateType = initiateType;
+  _activePublisherPlayerId = publisherPlayerId;
   gameAuthSessions.set(accessToken, { publisherPlayerId, initiateType });
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -123,5 +126,5 @@ router.get('/resolve', (req, res) => {
 });
 
 // Export the sessions map and active initiate type so the Appcharge endpoint can access them
-export { gameAuthSessions, getActiveInitiateType };
+export { gameAuthSessions, getActiveInitiateType, getActivePublisherPlayerId };
 export default router;

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import type { GameAuthInitRequest, GameAuthInitResponse } from 'shared/src/types.js';
 import { playerStore } from '../../index.js';
-import { gameAuthSessions, getActiveInitiateType } from '../dashboard/game-auth.js';
+import { gameAuthSessions, getActiveInitiateType, getActivePublisherPlayerId } from '../dashboard/game-auth.js';
 import { settings } from '../dashboard/settings.js';
 
 const router = Router();
@@ -19,8 +19,9 @@ router.post('/', (req, res) => {
   const initiateType = body.initiateType || getActiveInitiateType();
   const accessToken = uuid();
 
-  // Store the session so the auth endpoint can validate later
-  gameAuthSessions.set(accessToken, { publisherPlayerId: '', initiateType });
+  // Store the session — use the player selected from the dashboard so the
+  // game-redirect page can auto-identify without showing a picker
+  gameAuthSessions.set(accessToken, { publisherPlayerId: getActivePublisherPlayerId(), initiateType });
 
   // Derive deepLink base URL from the incoming request (works behind Render proxy)
   const baseUrl = `${req.protocol}://${req.get('host')}`;
