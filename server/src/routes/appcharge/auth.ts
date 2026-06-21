@@ -23,6 +23,7 @@ router.post('/', (req, res) => {
       playerName: player?.playerName || 'Guest',
       playerProfileImage: player?.playerProfileImage || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest',
       sessionMetadata: player?.sessionMetadata || {},
+      token: body.token as string,
     };
     res.json(response);
     return;

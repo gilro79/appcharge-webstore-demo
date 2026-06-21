@@ -71,6 +71,7 @@ export interface AuthResponse {
   playerName: string;
   playerProfileImage: string;
   sessionMetadata: Record<string, string>;
+  token?: string;
 }
 
 // ─── Personalization (returned to Appcharge) ───
