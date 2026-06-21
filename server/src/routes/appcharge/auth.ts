@@ -8,11 +8,12 @@ const router = Router();
 router.post('/', (req, res) => {
   const body = req.body as AuthRequest;
 
-  // Game Redirect Login: if request has a proofKey, validate against the game auth session
-  if (body.proofKey && body.token) {
-    const session = gameAuthSessions.get(body.token as string);
-    if (!session || session.proofKey !== body.proofKey) {
-      res.status(401).json({ status: 'invalid', error: 'Invalid proofKey or token' });
+  // Game Redirect Login (OTP): Appcharge sends { otp: { playerCode, accessToken } }
+  if (body.otp) {
+    const { playerCode, accessToken } = body.otp;
+    const session = gameAuthSessions.get(accessToken);
+    if (!session || session.proofKey !== playerCode) {
+      res.status(401).json({ status: 'invalid', error: 'Invalid playerCode or accessToken' });
       return;
     }
 
@@ -23,7 +24,6 @@ router.post('/', (req, res) => {
       playerName: player?.playerName || 'Guest',
       playerProfileImage: player?.playerProfileImage || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest',
       sessionMetadata: player?.sessionMetadata || {},
-      token: body.token as string,
     };
     res.json(response);
     return;

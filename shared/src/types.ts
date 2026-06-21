@@ -62,6 +62,7 @@ export interface GameAuthInitResponse {
 export interface AuthRequest {
   token?: string;
   publisherPlayerId?: string;
+  otp?: { playerCode: string; accessToken: string };
   [key: string]: unknown;
 }
 
@@ -71,7 +72,6 @@ export interface AuthResponse {
   playerName: string;
   playerProfileImage: string;
   sessionMetadata: Record<string, string>;
-  token?: string;
 }
 
 // ─── Personalization (returned to Appcharge) ───
