@@ -47,6 +47,7 @@ export interface Tier {
 export interface GameAuthInitRequest {
   deviceType: string;
   date: string;
+  initiateType?: 'qr' | 'auto-redirect' | 'in-app';
 }
 
 export interface GameAuthInitResponse {

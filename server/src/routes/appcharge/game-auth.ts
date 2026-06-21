@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import type { GameAuthInitRequest, GameAuthInitResponse } from 'shared/src/types.js';
 import { playerStore } from '../../index.js';
-import { gameAuthSessions } from '../dashboard/game-auth.js';
+import { gameAuthSessions, getActiveInitiateType } from '../dashboard/game-auth.js';
 import { settings } from '../dashboard/settings.js';
 
 const router = Router();
@@ -14,16 +14,21 @@ const router = Router();
  */
 router.post('/', (req, res) => {
   const body = req.body as GameAuthInitRequest;
+  // Use the initiate type from the request if provided, otherwise use the
+  // active type selected from the dashboard (defaults to 'qr')
+  const initiateType = body.initiateType || getActiveInitiateType();
   const accessToken = uuid();
 
   // Store the session so the auth endpoint can validate later
-  gameAuthSessions.set(accessToken, { publisherPlayerId: '', initiateType: 'in-app' });
+  gameAuthSessions.set(accessToken, { publisherPlayerId: '', initiateType });
 
   // Derive deepLink base URL from the incoming request (works behind Render proxy)
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const deepLink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
 
-  const response: GameAuthInitResponse = { deepLink, accessToken, desktopAutoRedirect: true };
+  const desktopAutoRedirect = initiateType !== 'qr';
+
+  const response: GameAuthInitResponse = { deepLink, accessToken, desktopAutoRedirect };
   res.json(response);
 });
 
