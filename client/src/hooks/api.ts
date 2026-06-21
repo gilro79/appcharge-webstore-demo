@@ -71,8 +71,8 @@ export const api = {
     request<any>('/appcharge/price-points', { method: 'POST', body: JSON.stringify({ priceInUsdCents }) }),
 
   // Game Auth (Game Redirect Login)
-  simulateGameAuth: (publisherPlayerId: string, initiateType: string = 'in-app') =>
-    request<any>('/game-auth/simulate', { method: 'POST', body: JSON.stringify({ publisherPlayerId, initiateType }) }),
+  simulateGameAuth: (publisherPlayerId: string, initiateType: string = 'in-app', webstoreUrl?: string) =>
+    request<any>('/game-auth/simulate', { method: 'POST', body: JSON.stringify({ publisherPlayerId, initiateType, webstoreUrl }) }),
   getGameAuthSession: (accessToken: string) =>
     request<any>(`/game-auth/session/${accessToken}`),
   resolveGameAuth: (proofKey: string, token: string) =>

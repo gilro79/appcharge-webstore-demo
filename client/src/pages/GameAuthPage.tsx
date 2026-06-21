@@ -26,7 +26,7 @@ export default function GameAuthPage() {
     setLoading(true);
     setResolveData(null);
     try {
-      const data = await api.simulateGameAuth(selectedPlayerId, initiateType);
+      const data = await api.simulateGameAuth(selectedPlayerId, initiateType, settings?.appchargeWebstoreUrl);
       setFlowData(data);
     } catch (err: any) {
       alert(`Error: ${err.message}`);

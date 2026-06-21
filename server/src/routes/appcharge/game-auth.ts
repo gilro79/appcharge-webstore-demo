@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import type { GameAuthInitRequest, GameAuthInitResponse } from 'shared/src/types.js';
 import { playerStore } from '../../index.js';
-import { gameAuthSessions, getActiveInitiateType, getActivePublisherPlayerId } from '../dashboard/game-auth.js';
-import { settings } from '../dashboard/settings.js';
+import { gameAuthSessions, getActiveInitiateType, getActivePublisherPlayerId, getActiveWebstoreUrl } from '../dashboard/game-auth.js';
+import { getWebstoreUrl } from '../dashboard/settings.js';
 
 const router = Router();
 
@@ -19,9 +19,10 @@ router.post('/', (req, res) => {
   const initiateType = body.initiateType || getActiveInitiateType();
   const accessToken = uuid();
 
-  // Store the session — use the player selected from the dashboard so the
-  // game-redirect page can auto-identify without showing a picker
-  gameAuthSessions.set(accessToken, { publisherPlayerId: getActivePublisherPlayerId(), initiateType });
+  // Store the session — use the player and webstore URL from the dashboard
+  // so the game-redirect page can auto-identify and redirect back
+  const webstoreUrl = getActiveWebstoreUrl() || getWebstoreUrl();
+  gameAuthSessions.set(accessToken, { publisherPlayerId: getActivePublisherPlayerId(), initiateType, webstoreUrl });
 
   // Derive deepLink base URL from the incoming request (works behind Render proxy)
   const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -101,17 +102,10 @@ router.post('/identify', (req, res) => {
 
   const player = playerStore.findBy((p) => p.publisherPlayerId === publisherPlayerId);
 
-  // Use the webstore URL from settings, falling back to the active environment
-  let webstoreUrl = settings.appchargeWebstoreUrl;
-  if (!webstoreUrl) {
-    const activeEnv = settings.environments.find((e) => e.name === settings.activeEnvName);
-    if (activeEnv) webstoreUrl = activeEnv.webstoreUrl;
-  }
-
   res.json({
     proofKey: session.proofKey,
     playerName: player?.playerName || 'Unknown Player',
-    webstoreUrl,
+    webstoreUrl: session.webstoreUrl || getWebstoreUrl(),
     initiateType: session.initiateType,
   });
 });

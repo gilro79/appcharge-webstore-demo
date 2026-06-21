@@ -6,18 +6,21 @@ const router = Router();
 
 type InitiateType = 'qr' | 'auto-redirect' | 'in-app';
 
-// In-memory map: accessToken -> { publisherPlayerId, proofKey?, initiateType }
+// In-memory map: accessToken -> { publisherPlayerId, proofKey?, initiateType, webstoreUrl? }
 const gameAuthSessions = new Map<string, {
   publisherPlayerId: string;
   proofKey?: string;
   initiateType: InitiateType;
+  webstoreUrl?: string;
 }>();
 
 // Active settings selected from the dashboard — used by the Appcharge game-auth endpoint
 let _activeInitiateType: InitiateType = 'qr';
 let _activePublisherPlayerId = '';
+let _activeWebstoreUrl = '';
 function getActiveInitiateType(): InitiateType { return _activeInitiateType; }
 function getActivePublisherPlayerId(): string { return _activePublisherPlayerId; }
+function getActiveWebstoreUrl(): string { return _activeWebstoreUrl; }
 
 /**
  * POST /api/dashboard/game-auth/simulate
@@ -25,9 +28,10 @@ function getActivePublisherPlayerId(): string { return _activePublisherPlayerId;
  * Receives { publisherPlayerId }, generates an accessToken, stores the mapping.
  */
 router.post('/simulate', (req, res) => {
-  const { publisherPlayerId, initiateType = 'in-app' } = req.body as {
+  const { publisherPlayerId, initiateType = 'in-app', webstoreUrl } = req.body as {
     publisherPlayerId: string;
     initiateType?: InitiateType;
+    webstoreUrl?: string;
   };
 
   if (!publisherPlayerId) {
@@ -38,7 +42,8 @@ router.post('/simulate', (req, res) => {
   const accessToken = uuid();
   _activeInitiateType = initiateType;
   _activePublisherPlayerId = publisherPlayerId;
-  gameAuthSessions.set(accessToken, { publisherPlayerId, initiateType });
+  if (webstoreUrl) _activeWebstoreUrl = webstoreUrl;
+  gameAuthSessions.set(accessToken, { publisherPlayerId, initiateType, webstoreUrl });
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const deepLink = `${baseUrl}/game-redirect?accessToken=${accessToken}`;
@@ -126,5 +131,5 @@ router.get('/resolve', (req, res) => {
 });
 
 // Export the sessions map and active initiate type so the Appcharge endpoint can access them
-export { gameAuthSessions, getActiveInitiateType, getActivePublisherPlayerId };
+export { gameAuthSessions, getActiveInitiateType, getActivePublisherPlayerId, getActiveWebstoreUrl };
 export default router;

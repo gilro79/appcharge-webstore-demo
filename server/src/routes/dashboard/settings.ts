@@ -56,6 +56,13 @@ export function getApiBase(): string {
   return settings.appchargeApiBase;
 }
 
+/** Returns the webstore URL from settings or active environment. */
+export function getWebstoreUrl(): string {
+  if (settings.appchargeWebstoreUrl) return settings.appchargeWebstoreUrl;
+  const activeEnv = settings.environments.find((e) => e.name === settings.activeEnvName);
+  return activeEnv?.webstoreUrl || '';
+}
+
 router.get('/', (_req, res) => {
   res.json({
     ...settings,
