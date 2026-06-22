@@ -7,12 +7,21 @@ export default function GameAuthPage() {
   const [settings, setSettings] = useState<any>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [initiateType, setInitiateType] = useState<'qr' | 'auto-redirect' | 'in-app'>('qr');
+  const [webstoreUrl, setWebstoreUrl] = useState('');
   const [flowData, setFlowData] = useState<any>(null);
   const [resolveData, setResolveData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.getSettings().then(setSettings).catch(() => {});
+    api.getSettings().then((s: any) => {
+      setSettings(s);
+      // Find the webstore URL from settings or the active environment
+      const url = s?.appchargeWebstoreUrl
+        || s?.environments?.find((e: any) => e.name === s.activeEnvName)?.webstoreUrl
+        || s?.environments?.find((e: any) => e.webstoreUrl)?.webstoreUrl
+        || '';
+      if (url) setWebstoreUrl(url);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -26,7 +35,7 @@ export default function GameAuthPage() {
     setLoading(true);
     setResolveData(null);
     try {
-      const data = await api.simulateGameAuth(selectedPlayerId, initiateType, settings?.appchargeWebstoreUrl);
+      const data = await api.simulateGameAuth(selectedPlayerId, initiateType, webstoreUrl);
       setFlowData(data);
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -46,8 +55,6 @@ export default function GameAuthPage() {
       alert(`Error: ${err.message}`);
     }
   };
-
-  const webstoreUrl = settings?.appchargeWebstoreUrl || '';
 
   return (
     <div className="space-y-6">
@@ -93,6 +100,20 @@ export default function GameAuthPage() {
                 This player will be automatically identified and redirected back to the store.
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Webstore URL</label>
+            <input
+              type="text"
+              value={webstoreUrl}
+              onChange={(e) => setWebstoreUrl(e.target.value)}
+              placeholder="https://your-store.appchargestore.com"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The Appcharge store URL to redirect back to after authentication.
+            </p>
           </div>
 
           <div>
