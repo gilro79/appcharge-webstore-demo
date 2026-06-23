@@ -32,9 +32,15 @@ export default function GameAuthPage() {
 
   const handleStartFlow = async () => {
     if (!selectedPlayerId) return;
+    if (!webstoreUrl) {
+      alert('Please enter the Webstore URL before starting the flow.');
+      return;
+    }
     setLoading(true);
     setResolveData(null);
     try {
+      // Persist the webstore URL to settings so it survives server restarts
+      await api.updateSettings({ appchargeWebstoreUrl: webstoreUrl });
       const data = await api.simulateGameAuth(selectedPlayerId, initiateType, webstoreUrl);
       setFlowData(data);
     } catch (err: any) {
