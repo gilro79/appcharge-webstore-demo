@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { api } from '../hooks/api';
 import type { Tier, TierOfferRow, OfferType } from 'shared/types';
 import CreatePage from './CreatePage';
@@ -105,14 +105,24 @@ export default function PersonalizationPage() {
   // ─── Design section collapse ───
   const [designExpanded, setDesignExpanded] = useState(false);
 
-  // ─── Product add-dropdown refs ───
-  const productSelectRefs = useMemo(() => new Map<string, HTMLSelectElement>(), []);
-  const openProductDropdown = useCallback((key: string) => {
-    const el = productSelectRefs.get(key);
-    if (el) {
-      el.showPicker();
-    }
-  }, [productSelectRefs]);
+  // ─── Product add-dropdown state ───
+  const [openDropdownKey, setOpenDropdownKey] = useState<string | null>(null);
+  const dropdownBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const dropdownMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openDropdownKey) return;
+    const handler = (e: MouseEvent) => {
+      const menu = dropdownMenuRef.current;
+      const btn = dropdownBtnRefs.current.get(openDropdownKey);
+      if (menu && !menu.contains(e.target as Node) && btn && !btn.contains(e.target as Node)) {
+        setOpenDropdownKey(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openDropdownKey]);
 
   // ─── Pricing Points state ───
   const [pricePoints, setPricePoints] = useState<PricePoint[]>([]);
@@ -854,28 +864,53 @@ export default function PersonalizationPage() {
                                       </span>
                                     ))}
                                     {unassignedProducts.length > 0 && (
-                                      <>
-                                        <select
-                                          ref={(el) => { if (el) productSelectRefs.set(key, el); }}
-                                          value=""
-                                          onChange={(e) => {
-                                            if (e.target.value) updateSubOfferProduct(blockIdx, e.target.value, 1);
-                                          }}
-                                          className="sr-only"
-                                        >
-                                          <option value="">Select product...</option>
-                                          {unassignedProducts.map(col => (
-                                            <option key={col} value={col}>{col}</option>
-                                          ))}
-                                        </select>
+                                      <div className="relative">
                                         <button
-                                          onClick={() => openProductDropdown(key)}
+                                          ref={(el) => { if (el) dropdownBtnRefs.current.set(key, el); }}
+                                          onClick={() => setOpenDropdownKey(openDropdownKey === key ? null : key)}
                                           className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 text-sm leading-none flex-shrink-0"
                                           title="Add product"
                                         >
                                           +
                                         </button>
-                                      </>
+                                        {openDropdownKey === key && (
+                                          <div
+                                            ref={dropdownMenuRef}
+                                            className="absolute left-0 z-50 mt-1 w-48 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg"
+                                            style={{
+                                              bottom: (() => {
+                                                const btn = dropdownBtnRefs.current.get(key);
+                                                if (btn) {
+                                                  const rect = btn.getBoundingClientRect();
+                                                  if (rect.bottom + 200 > window.innerHeight) return '100%';
+                                                }
+                                                return undefined;
+                                              })(),
+                                              top: (() => {
+                                                const btn = dropdownBtnRefs.current.get(key);
+                                                if (btn) {
+                                                  const rect = btn.getBoundingClientRect();
+                                                  if (rect.bottom + 200 > window.innerHeight) return undefined;
+                                                }
+                                                return '100%';
+                                              })(),
+                                            }}
+                                          >
+                                            {unassignedProducts.map(col => (
+                                              <button
+                                                key={col}
+                                                onClick={() => {
+                                                  updateSubOfferProduct(blockIdx, col, 1);
+                                                  setOpenDropdownKey(null);
+                                                }}
+                                                className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-primary-50 hover:text-primary-700"
+                                              >
+                                                {col}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 );
@@ -1037,28 +1072,53 @@ export default function PersonalizationPage() {
                                   </span>
                                 ))}
                                 {unassignedProducts.length > 0 && (
-                                  <>
-                                    <select
-                                      ref={(el) => { if (el) productSelectRefs.set(key, el); }}
-                                      value=""
-                                      onChange={(e) => {
-                                        if (e.target.value) updateOfferProduct(i, e.target.value, 1);
-                                      }}
-                                      className="sr-only"
-                                    >
-                                      <option value="">Select product...</option>
-                                      {unassignedProducts.map(col => (
-                                        <option key={col} value={col}>{col}</option>
-                                      ))}
-                                    </select>
+                                  <div className="relative">
                                     <button
-                                      onClick={() => openProductDropdown(key)}
+                                      ref={(el) => { if (el) dropdownBtnRefs.current.set(key, el); }}
+                                      onClick={() => setOpenDropdownKey(openDropdownKey === key ? null : key)}
                                       className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 text-sm leading-none flex-shrink-0"
                                       title="Add product"
                                     >
                                       +
                                     </button>
-                                  </>
+                                    {openDropdownKey === key && (
+                                      <div
+                                        ref={dropdownMenuRef}
+                                        className="absolute left-0 z-50 mt-1 w-48 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg"
+                                        style={{
+                                          bottom: (() => {
+                                            const btn = dropdownBtnRefs.current.get(key);
+                                            if (btn) {
+                                              const rect = btn.getBoundingClientRect();
+                                              if (rect.bottom + 200 > window.innerHeight) return '100%';
+                                            }
+                                            return undefined;
+                                          })(),
+                                          top: (() => {
+                                            const btn = dropdownBtnRefs.current.get(key);
+                                            if (btn) {
+                                              const rect = btn.getBoundingClientRect();
+                                              if (rect.bottom + 200 > window.innerHeight) return undefined;
+                                            }
+                                            return '100%';
+                                          })(),
+                                        }}
+                                      >
+                                        {unassignedProducts.map(col => (
+                                          <button
+                                            key={col}
+                                            onClick={() => {
+                                              updateOfferProduct(i, col, 1);
+                                              setOpenDropdownKey(null);
+                                            }}
+                                            className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-primary-50 hover:text-primary-700"
+                                          >
+                                            {col}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             );
