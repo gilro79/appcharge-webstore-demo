@@ -124,6 +124,9 @@ export default function PersonalizationPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [openDropdownKey]);
 
+  // ─── Product images ───
+  const [productImages, setProductImages] = useState<Record<string, string>>({});
+
   // ─── Pricing Points state ───
   const [pricePoints, setPricePoints] = useState<PricePoint[]>([]);
   const [loadingPP, setLoadingPP] = useState(false);
@@ -140,6 +143,7 @@ export default function PersonalizationPage() {
     });
     api.getOfferDesigns().then(setOfferDesigns).catch(() => {});
     api.getBadges().then(setBadges).catch(() => {});
+    api.getProductImages().then(setProductImages).catch(() => {});
   }, []);
 
   // Load selected tier
@@ -842,6 +846,9 @@ export default function PersonalizationPage() {
                                   <div className="flex items-center gap-2 flex-nowrap">
                                     {assignedProducts.map(([productId, qty]) => (
                                       <span key={productId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                        {productImages[productId] && (
+                                          <img src={productImages[productId]} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                                        )}
                                         {productId}
                                         <input
                                           type="number"
@@ -903,8 +910,13 @@ export default function PersonalizationPage() {
                                                   updateSubOfferProduct(blockIdx, col, 1);
                                                   setOpenDropdownKey(null);
                                                 }}
-                                                className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-primary-50 hover:text-primary-700"
+                                                className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-primary-50 hover:text-primary-700"
                                               >
+                                                {productImages[col] ? (
+                                                  <img src={productImages[col]} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                                                ) : (
+                                                  <span className="w-4 h-4 rounded-full bg-gray-200 flex-shrink-0" />
+                                                )}
                                                 {col}
                                               </button>
                                             ))}
@@ -1050,6 +1062,9 @@ export default function PersonalizationPage() {
                               <div className="flex items-center gap-2 flex-nowrap">
                                 {assignedProducts.map(([productId, qty]) => (
                                   <span key={productId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                    {productImages[productId] && (
+                                      <img src={productImages[productId]} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                                    )}
                                     {productId}
                                     <input
                                       type="number"
@@ -1111,8 +1126,13 @@ export default function PersonalizationPage() {
                                               updateOfferProduct(i, col, 1);
                                               setOpenDropdownKey(null);
                                             }}
-                                            className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-primary-50 hover:text-primary-700"
+                                            className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-primary-50 hover:text-primary-700"
                                           >
+                                            {productImages[col] ? (
+                                              <img src={productImages[col]} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                                            ) : (
+                                              <span className="w-4 h-4 rounded-full bg-gray-200 flex-shrink-0" />
+                                            )}
                                             {col}
                                           </button>
                                         ))}

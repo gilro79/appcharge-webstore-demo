@@ -59,6 +59,9 @@ export const api = {
   deleteEnvironment: (name: string) =>
     request<any>(`/settings/environments/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 
+  // Product images
+  getProductImages: () => request<Record<string, string>>('/appcharge/product-images'),
+
   // Offer designs
   getOfferDesigns: () => request<any[]>('/appcharge/offer-designs'),
 

@@ -25,7 +25,16 @@ export function getCachedOfferUis(): CachedOfferUi[] {
 
 interface AppchargeProduct {
   publisherProductId: string;
+  image?: string;
+  imageUrl?: string;
   [key: string]: unknown;
+}
+
+// ─── Cached product images (populated during sync) ───
+let cachedProductImages: Record<string, string> = {};
+
+export function getCachedProductImages(): Record<string, string> {
+  return cachedProductImages;
 }
 
 export async function syncFromAppcharge(): Promise<void> {
@@ -118,7 +127,15 @@ export async function syncFromAppcharge(): Promise<void> {
     );
     const productIds = productsData.map((p) => p.publisherProductId);
 
-    console.log(`[sync] Fetched ${offerIds.length} offers, ${productIds.length} products from Appcharge`);
+    // Cache product image URLs
+    const imgMap: Record<string, string> = {};
+    for (const p of productsData) {
+      const url = p.image || p.imageUrl;
+      if (url) imgMap[p.publisherProductId] = url;
+    }
+    cachedProductImages = imgMap;
+
+    console.log(`[sync] Fetched ${offerIds.length} offers, ${productIds.length} products (${Object.keys(imgMap).length} with images) from Appcharge`);
 
     // Update every tier with the full offer/product lists
     const tiers = tierStore.getAll();

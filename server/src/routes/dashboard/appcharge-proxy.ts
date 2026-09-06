@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { syncFromAppcharge, getCachedOfferUis } from '../../services/syncAppcharge.js';
+import { syncFromAppcharge, getCachedOfferUis, getCachedProductImages } from '../../services/syncAppcharge.js';
 import { logOutboundCall } from '../../services/apiLogger.js';
 import { getPublisherToken, getApiBase } from './settings.js';
 
@@ -8,6 +8,11 @@ const router = Router();
 // GET /api/dashboard/appcharge/offer-uis → return cached offer UIs (no external call)
 router.get('/offer-uis', (_req, res) => {
   res.json(getCachedOfferUis());
+});
+
+// GET /api/dashboard/appcharge/product-images → return cached product image map
+router.get('/product-images', (_req, res) => {
+  res.json(getCachedProductImages());
 });
 
 // POST /api/dashboard/appcharge/products → proxy to Appcharge create product
