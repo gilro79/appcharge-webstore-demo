@@ -8,6 +8,7 @@ import PersonalizationPage from './pages/PersonalizationPage';
 import EventsPage from './pages/EventsPage';
 import ApiReferencePage from './pages/ApiReferencePage';
 import SettingsPage from './pages/SettingsPage';
+import WebstorePreviewPage from './pages/WebstorePreviewPage';
 import GameAuthPage from './pages/GameAuthPage';
 import GameRedirectPage from './pages/GameRedirectPage';
 import LoginPage from './pages/LoginPage';
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/api-reference" element={<ApiReferencePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/webstore-preview" element={<WebstorePreviewPage />} />
         </Route>
       </Routes>
     </ActivePlayerProvider>
