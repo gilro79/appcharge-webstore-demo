@@ -90,7 +90,7 @@ router.post('/', (req, res) => {
     offersOrder: 'priceLowToHigh',
     sectionsOrder: [],
     attributes: {},
-    balances: [],
+    balances: player?.balances || [],
     storeTheme: {},
     offers,
   };

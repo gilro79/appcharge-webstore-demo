@@ -7,6 +7,10 @@ export const seedPlayers: Player[] = [
     playerName: 'Naama',
     playerProfileImage: 'https://res.cloudinary.com/dewxyzl9a/image/upload/v1770802835/Naama_m1vkou.png',
     sessionMetadata: { abTest: 'group1', locale: 'en-US' },
+    balances: [
+      { publisherProductId: 'star', quantity: 8500 },
+      { publisherProductId: 'RocketBaby', quantity: 3200 },
+    ],
     description: 'Whale / Diamond tier player with high balances and premium offers',
     tierId: 'tier-diamond',
   },
@@ -16,6 +20,10 @@ export const seedPlayers: Player[] = [
     playerName: 'Shelly',
     playerProfileImage: 'https://res.cloudinary.com/dewxyzl9a/image/upload/v1770802863/Shelly_dh3mif.png',
     sessionMetadata: { abTest: 'group2', locale: 'en-US' },
+    balances: [
+      { publisherProductId: 'star', quantity: 4200 },
+      { publisherProductId: 'RocketBaby', quantity: 1500 },
+    ],
     description: 'Mid-tier gold player with progression offers',
     tierId: 'tier-gold',
   },
@@ -25,6 +33,10 @@ export const seedPlayers: Player[] = [
     playerName: 'Roy',
     playerProfileImage: 'https://res.cloudinary.com/dewxyzl9a/image/upload/v1770802851/Roy_fbpxll.png',
     sessionMetadata: { abTest: 'group1', locale: 'fr-FR' },
+    balances: [
+      { publisherProductId: 'star', quantity: 1200 },
+      { publisherProductId: 'RocketBaby', quantity: 350 },
+    ],
     description: 'New player with starter packs and first-purchase bonuses',
     tierId: 'tier-bronze',
   },

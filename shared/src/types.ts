@@ -6,6 +6,7 @@ export interface Player {
   playerName: string;
   playerProfileImage: string;
   sessionMetadata: Record<string, string>;
+  balances?: Balance[];
   description?: string;
   tierId?: string;
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useActivePlayer } from '../context/ActivePlayerContext';
 import { api } from '../hooks/api';
-import type { Player, Tier } from 'shared/types';
+import type { Player, Tier, Balance } from 'shared/types';
 
 const TIERS = [
   { id: 'tier-diamond', name: 'Diamond' },
@@ -9,11 +9,25 @@ const TIERS = [
   { id: 'tier-bronze', name: 'Bronze' },
 ];
 
-function PlayerForm({ player, onSave, onCancel }: {
+function randomQty() {
+  return Math.floor(Math.random() * 9901) + 100; // 100–10000
+}
+
+function PlayerForm({ player, onSave, onCancel, productIds }: {
   player?: Player;
   onSave: (data: Partial<Player>) => void;
   onCancel: () => void;
+  productIds: string[];
 }) {
+  const defaultBalances = (): Balance[] => {
+    if (player?.balances?.length) return player.balances;
+    // Default: first 2 products with random quantities
+    return productIds.slice(0, 2).map((id) => ({
+      publisherProductId: id,
+      quantity: randomQty(),
+    }));
+  };
+
   const [form, setForm] = useState({
     publisherPlayerId: player?.publisherPlayerId || '',
     playerName: player?.playerName || '',
@@ -22,6 +36,7 @@ function PlayerForm({ player, onSave, onCancel }: {
     tierId: player?.tierId || 'tier-bronze',
     sessionMetadata: JSON.stringify(player?.sessionMetadata || {}, null, 2),
   });
+  const [balances, setBalances] = useState<Balance[]>(defaultBalances);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,10 +48,25 @@ function PlayerForm({ player, onSave, onCancel }: {
         description: form.description,
         tierId: form.tierId,
         sessionMetadata: JSON.parse(form.sessionMetadata),
+        balances,
       });
     } catch {
       alert('Invalid JSON in session metadata');
     }
+  };
+
+  const updateBalance = (index: number, field: keyof Balance, value: string | number) => {
+    setBalances((prev) => prev.map((b, i) => i === index ? { ...b, [field]: value } : b));
+  };
+
+  const removeBalance = (index: number) => {
+    setBalances((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addBalance = () => {
+    const used = new Set(balances.map((b) => b.publisherProductId));
+    const next = productIds.find((id) => !used.has(id)) || productIds[0] || '';
+    setBalances((prev) => [...prev, { publisherProductId: next, quantity: randomQty() }]);
   };
 
   return (
@@ -91,6 +121,50 @@ function PlayerForm({ player, onSave, onCancel }: {
           ))}
         </select>
       </div>
+
+      {/* Balances */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Balances</label>
+        <div className="space-y-2">
+          {balances.map((bal, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <select
+                value={bal.publisherProductId}
+                onChange={(e) => updateBalance(idx, 'publisherProductId', e.target.value)}
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                {productIds.map((pid) => (
+                  <option key={pid} value={pid}>{pid}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={bal.quantity}
+                onChange={(e) => updateBalance(idx, 'quantity', Number(e.target.value))}
+                className="w-28 border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                min={0}
+              />
+              <button
+                type="button"
+                onClick={() => removeBalance(idx)}
+                className="text-red-500 hover:text-red-700 text-sm font-medium px-2"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        {productIds.length > 0 && (
+          <button
+            type="button"
+            onClick={addBalance}
+            className="mt-2 text-sm text-primary-600 hover:text-primary-800 font-medium"
+          >
+            + Add Balance
+          </button>
+        )}
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Session Metadata (JSON)</label>
         <textarea
@@ -116,6 +190,17 @@ export default function PlayersPage() {
   const { players, refreshPlayers } = useActivePlayer();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [productIds, setProductIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.getTiers().then((tiers: Tier[]) => {
+      const ids = new Set<string>();
+      for (const t of tiers) {
+        for (const col of t.productColumns) ids.add(col);
+      }
+      setProductIds(Array.from(ids).sort());
+    });
+  }, []);
 
   const handleCreate = async (data: Partial<Player>) => {
     await api.createPlayer(data);
@@ -157,9 +242,11 @@ export default function PlayersPage() {
             {editingPlayer ? `Edit ${editingPlayer.playerName}` : 'New Player'}
           </h2>
           <PlayerForm
+            key={editingPlayer?.id || 'new'}
             player={editingPlayer || undefined}
             onSave={editingPlayer ? handleUpdate : handleCreate}
             onCancel={() => { setShowForm(false); setEditingPlayer(null); }}
+            productIds={productIds}
           />
         </div>
       )}
@@ -193,6 +280,19 @@ export default function PlayersPage() {
                   <p className="text-sm text-gray-500 font-mono">ID: {player.publisherPlayerId}</p>
                   {player.description && (
                     <p className="text-sm text-gray-500 mt-1">{player.description}</p>
+                  )}
+                  {player.balances && player.balances.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {player.balances.map((b) => (
+                        <span
+                          key={b.publisherProductId}
+                          className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-1 rounded-md border border-green-200"
+                        >
+                          <span className="font-medium">{b.publisherProductId}:</span>
+                          <span className="font-mono">{b.quantity.toLocaleString()}</span>
+                        </span>
+                      ))}
+                    </div>
                   )}
                   <div className="mt-2">
                     <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
