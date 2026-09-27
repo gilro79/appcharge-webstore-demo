@@ -41,6 +41,11 @@ export interface Tier {
   productColumns: string[];
   offerDesigns: string[];
   offers: TierOfferRow[];
+  brandKit?: {
+    bgImageMobile?: string;
+    bgImageDesktop?: string;
+    bannerImage?: string;
+  };
 }
 
 // ─── Game Auth (OTP / Game Redirect Login) ───

@@ -91,7 +91,13 @@ router.post('/', (req, res) => {
     sectionsOrder: [],
     attributes: {},
     balances: player?.balances || [],
-    storeTheme: {},
+    storeTheme: (() => {
+      const theme: Record<string, string> = {};
+      if (tier.brandKit?.bgImageMobile) theme.bgImageMobile = tier.brandKit.bgImageMobile;
+      if (tier.brandKit?.bgImageDesktop) theme.bgImageDesktop = tier.brandKit.bgImageDesktop;
+      if (tier.brandKit?.bannerImage) theme.bannerImage = tier.brandKit.bannerImage;
+      return theme;
+    })(),
     offers,
   };
 

@@ -68,6 +68,9 @@ export const api = {
   // Badges
   getBadges: () => request<any[]>('/appcharge/badges'),
 
+  // Assets (backgrounds & banners)
+  getAssets: () => request<any[]>('/appcharge/assets'),
+
   // Price points
   getPricePoints: () => request<any>('/appcharge/price-points'),
   createPricePoint: (priceInUsdCents: number) =>
