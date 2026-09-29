@@ -105,7 +105,7 @@ export default function GameRedirectPage() {
     }
 
     const url = webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`;
-    const redirectUrl = `${url}?playerCode=${encodeURIComponent(identified.proofKey)}&accessToken=${encodeURIComponent(accessToken)}`;
+    const redirectUrl = `${url}?playerCode=${encodeURIComponent(identified.proofKey)}&token=${encodeURIComponent(accessToken)}`;
 
     console.log('[GameRedirect] redirecting to:', redirectUrl);
 
@@ -133,7 +133,7 @@ export default function GameRedirectPage() {
 
   const storeLink =
     identified?.webstoreUrl
-      ? `${identified.webstoreUrl.startsWith('http') ? identified.webstoreUrl : `https://${identified.webstoreUrl}`}?playerCode=${encodeURIComponent(identified.proofKey)}&accessToken=${encodeURIComponent(accessToken)}`
+      ? `${identified.webstoreUrl.startsWith('http') ? identified.webstoreUrl : `https://${identified.webstoreUrl}`}?playerCode=${encodeURIComponent(identified.proofKey)}&token=${encodeURIComponent(accessToken)}`
       : '';
 
   if (loading) {
