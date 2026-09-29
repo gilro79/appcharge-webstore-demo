@@ -19,8 +19,8 @@ export default function GameAuthPage() {
       const url = s?.appchargeWebstoreUrl
         || s?.environments?.find((e: any) => e.name === s.activeEnvName)?.webstoreUrl
         || s?.environments?.find((e: any) => e.webstoreUrl)?.webstoreUrl
-        || '';
-      if (url) setWebstoreUrl(url);
+        || 'https://appcharge-onboarding-demo-sandbox.appchargestore.com';
+      setWebstoreUrl(url);
     }).catch(() => {});
   }, []);
 
