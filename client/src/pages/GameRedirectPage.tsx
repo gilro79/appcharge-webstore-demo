@@ -92,6 +92,13 @@ export default function GameRedirectPage() {
     if (initiateType !== 'auto-redirect' || !identified) return;
 
     const webstoreUrl = identified.webstoreUrl;
+    console.log('[GameRedirect] auto-redirect triggered', {
+      webstoreUrl,
+      proofKey: identified.proofKey,
+      accessToken,
+      playerName: identified.playerName,
+    });
+
     if (!webstoreUrl) {
       setError('No webstore URL configured. Set it in the dashboard Settings page.');
       return;
@@ -99,6 +106,8 @@ export default function GameRedirectPage() {
 
     const url = webstoreUrl.startsWith('http') ? webstoreUrl : `https://${webstoreUrl}`;
     const redirectUrl = `${url}?playerCode=${encodeURIComponent(identified.proofKey)}&accessToken=${encodeURIComponent(accessToken)}`;
+
+    console.log('[GameRedirect] redirecting to:', redirectUrl);
 
     // Brief delay so user sees the "Redirecting..." message
     const timer = setTimeout(() => {

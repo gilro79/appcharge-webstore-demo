@@ -104,14 +104,20 @@ router.get('/session/:accessToken', (req, res) => {
 router.get('/resolve', (req, res) => {
   const { proofKey, token } = req.query as { proofKey?: string; token?: string };
 
+  console.log('[game-auth/resolve] called with:', { proofKey, token });
+
   if (!proofKey || !token) {
+    console.log('[game-auth/resolve] missing proofKey or token');
     res.status(400).json({ error: 'Missing proofKey or token' });
     return;
   }
 
   const session = gameAuthSessions.get(token);
 
+  console.log('[game-auth/resolve] session lookup:', session ? { publisherPlayerId: session.publisherPlayerId, proofKey: session.proofKey, initiateType: session.initiateType } : 'NOT FOUND');
+
   if (!session || session.proofKey !== proofKey) {
+    console.log('[game-auth/resolve] MISMATCH — session proofKey:', session?.proofKey, 'vs provided:', proofKey);
     res.json({
       status: 'invalid',
       error: 'Invalid proofKey or token',
@@ -120,6 +126,8 @@ router.get('/resolve', (req, res) => {
   }
 
   const player = playerStore.findBy((p) => p.publisherPlayerId === session.publisherPlayerId);
+
+  console.log('[game-auth/resolve] SUCCESS — player:', player?.playerName);
 
   res.json({
     status: 'valid',

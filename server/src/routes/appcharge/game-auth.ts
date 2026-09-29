@@ -31,6 +31,7 @@ router.post('/', (req, res) => {
   const desktopAutoRedirect = initiateType !== 'qr';
 
   const response: GameAuthInitResponse = { deepLink, accessToken, token: accessToken, desktopAutoRedirect };
+  console.log('[game-auth/initiate] initiateType:', initiateType, 'accessToken:', accessToken, 'webstoreUrl:', webstoreUrl, 'desktopAutoRedirect:', desktopAutoRedirect);
   res.json(response);
 });
 
@@ -82,6 +83,8 @@ router.post('/identify', (req, res) => {
     publisherPlayerId: string;
   };
 
+  console.log('[game-auth/identify] called with:', { accessToken, publisherPlayerId });
+
   if (!accessToken || !publisherPlayerId) {
     res.status(400).json({ error: 'Missing accessToken or publisherPlayerId' });
     return;
@@ -89,9 +92,12 @@ router.post('/identify', (req, res) => {
 
   const session = gameAuthSessions.get(accessToken);
   if (!session) {
+    console.log('[game-auth/identify] session NOT found for accessToken:', accessToken);
     res.status(404).json({ error: 'Session not found — accessToken is invalid or expired' });
     return;
   }
+
+  console.log('[game-auth/identify] session found:', { initiateType: session.initiateType, webstoreUrl: session.webstoreUrl });
 
   // Store the player mapping and generate proofKey
   // 4-digit for QR mode, 6-digit for auto-redirect and in-app
@@ -102,12 +108,15 @@ router.post('/identify', (req, res) => {
 
   const player = playerStore.findBy((p) => p.publisherPlayerId === publisherPlayerId);
 
-  res.json({
+  const responseBody = {
     proofKey: session.proofKey,
     playerName: player?.playerName || 'Unknown Player',
     webstoreUrl: session.webstoreUrl || getWebstoreUrl(),
     initiateType: session.initiateType,
-  });
+  };
+  console.log('[game-auth/identify] responding with:', responseBody);
+
+  res.json(responseBody);
 });
 
 export default router;

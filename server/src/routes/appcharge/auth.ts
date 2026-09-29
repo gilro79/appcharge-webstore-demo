@@ -8,16 +8,25 @@ const router = Router();
 router.post('/', (req, res) => {
   const body = req.body as AuthRequest;
 
+  console.log('[auth] called with body:', JSON.stringify(body));
+
   // Game Redirect Login (OTP): Appcharge sends { otp: { playerCode, accessToken } }
   if (body.otp) {
     const { playerCode, accessToken } = body.otp;
+    console.log('[auth] OTP mode — playerCode:', playerCode, 'accessToken:', accessToken);
+
     const session = gameAuthSessions.get(accessToken);
+    console.log('[auth] session lookup:', session ? { publisherPlayerId: session.publisherPlayerId, proofKey: session.proofKey, initiateType: session.initiateType } : 'NOT FOUND');
+
     if (!session || session.proofKey !== playerCode) {
+      console.log('[auth] OTP MISMATCH — session proofKey:', session?.proofKey, 'vs playerCode:', playerCode);
       res.status(401).json({ status: 'invalid', error: 'Invalid playerCode or accessToken' });
       return;
     }
 
     const player = playerStore.findBy((p) => p.publisherPlayerId === session.publisherPlayerId);
+    console.log('[auth] OTP SUCCESS — player:', player?.playerName);
+
     const response: AuthResponse = {
       status: 'valid',
       publisherPlayerId: session.publisherPlayerId,
