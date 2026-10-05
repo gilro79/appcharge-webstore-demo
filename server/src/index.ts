@@ -24,6 +24,7 @@ import dashboardSettingsRoutes from './routes/dashboard/settings.js';
 import dashboardAppchargeProxyRoutes from './routes/dashboard/appcharge-proxy.js';
 import gameAuthAppchargeRoutes from './routes/appcharge/game-auth.js';
 import dashboardGameAuthRoutes from './routes/dashboard/game-auth.js';
+import dashboardToolsRoutes from './routes/dashboard/tools.js';
 
 // ─── Stores (exported for route handlers) ───
 export const playerStore = new Store<Player>('players');
@@ -76,6 +77,7 @@ async function bootstrap() {
   app.use('/api/dashboard/settings', requireAuth, dashboardSettingsRoutes);
   app.use('/api/dashboard/appcharge', requireAuth, dashboardAppchargeProxyRoutes);
   app.use('/api/dashboard/game-auth', requireAuth, dashboardGameAuthRoutes);
+  app.use('/api/dashboard/tools', requireAuth, express.json({ limit: '50mb' }), dashboardToolsRoutes);
 
   // ─── Serve React client in production ───
   if (config.nodeEnv === 'production') {

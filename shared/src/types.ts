@@ -177,6 +177,63 @@ export interface ApiLogEntry {
   durationMs: number;
 }
 
+// ─── Env Duplication Tool ───
+
+export type DupEnvType = 'staging' | 'sandbox' | 'production';
+
+export interface DupEnvConfig {
+  envType: DupEnvType;
+  publisherToken: string;
+}
+
+export interface DupFetchSourceRequest {
+  envType: DupEnvType;
+  publisherToken: string;
+}
+
+export interface DupFetchSourceResponse {
+  products: Record<string, unknown>[];
+  offerDesigns: Record<string, unknown>[];
+  badges: Record<string, unknown>[];
+  offers: Record<string, unknown>[];
+  pricePoints: Record<string, unknown>[];
+  assets: Record<string, unknown>[];
+}
+
+export interface DupDuplicateRequest {
+  source: DupEnvConfig;
+  target: DupEnvConfig;
+  sourceData: DupFetchSourceResponse;
+}
+
+export type DupEntityType = 'product' | 'offerDesign' | 'badge' | 'offer' | 'pricePoint' | 'asset';
+
+export type DupLogStatus = 'success' | 'skipped' | 'failed';
+
+export interface DupProgressEvent {
+  entityType: DupEntityType;
+  name: string;
+  status: DupLogStatus;
+  message: string;
+}
+
+export interface DupDuplicationSummary {
+  success: number;
+  skipped: number;
+  failed: number;
+}
+
+export interface DupApiLogEntry {
+  method: string;
+  url: string;
+  requestBody?: unknown;
+  status: number;
+  responseBody?: unknown;
+  timestamp: string;
+}
+
+export type DupApiLogger = (entry: DupApiLogEntry) => void;
+
 // ─── Settings ───
 
 export interface AppEnvironment {

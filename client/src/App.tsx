@@ -12,6 +12,7 @@ import WebstorePreviewPage from './pages/WebstorePreviewPage';
 import GameAuthPage from './pages/GameAuthPage';
 import GameRedirectPage from './pages/GameRedirectPage';
 import LoginPage from './pages/LoginPage';
+import ToolsPage from './pages/ToolsPage';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/api-reference" element={<ApiReferencePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/webstore-preview" element={<WebstorePreviewPage />} />
+          <Route path="/tools" element={<ToolsPage />} />
         </Route>
       </Routes>
     </ActivePlayerProvider>

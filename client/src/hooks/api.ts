@@ -76,6 +76,32 @@ export const api = {
   createPricePoint: (priceInUsdCents: number) =>
     request<any>('/appcharge/price-points', { method: 'POST', body: JSON.stringify({ priceInUsdCents }) }),
 
+  // Tools (Env Duplication) — raw fetch for SSE streaming
+  toolsFetchSource: (envType: string, publisherToken: string) =>
+    fetch(`${BASE}/tools/fetch-source`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ envType, publisherToken }),
+    }),
+  toolsDuplicate: (body: any) =>
+    fetch(`${BASE}/tools/duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  toolsDuplicateType: (body: any) =>
+    fetch(`${BASE}/tools/duplicate-type`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  toolsDeleteEntities: (body: any) =>
+    fetch(`${BASE}/tools/delete-entities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+
   // Game Auth (Game Redirect Login)
   simulateGameAuth: (publisherPlayerId: string, initiateType: string = 'in-app', webstoreUrl?: string) =>
     request<any>('/game-auth/simulate', { method: 'POST', body: JSON.stringify({ publisherPlayerId, initiateType, webstoreUrl }) }),
