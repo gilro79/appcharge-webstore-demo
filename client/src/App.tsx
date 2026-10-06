@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ActivePlayerProvider } from './context/ActivePlayerContext';
 import AppShell from './components/layout/AppShell';
+import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 import PlayersPage from './pages/PlayersPage';
 import PersonalizationPage from './pages/PersonalizationPage';
@@ -38,16 +39,17 @@ export default function App() {
     <ActivePlayerProvider>
       <Routes>
         <Route path="/game-redirect" element={<GameRedirectPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/checkout" element={<WebstorePreviewPage />} />
+        <Route path="/tools" element={<ToolsPage />} />
         <Route element={<AppShell />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/players" element={<PlayersPage />} />
-          <Route path="/game-auth" element={<GameAuthPage />} />
-          <Route path="/personalization" element={<PersonalizationPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/api-reference" element={<ApiReferencePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/webstore-preview" element={<WebstorePreviewPage />} />
-          <Route path="/tools" element={<ToolsPage />} />
+          <Route path="/demo" element={<DashboardPage />} />
+          <Route path="/demo/players" element={<PlayersPage />} />
+          <Route path="/demo/game-auth" element={<GameAuthPage />} />
+          <Route path="/demo/personalization" element={<PersonalizationPage />} />
+          <Route path="/demo/events" element={<EventsPage />} />
+          <Route path="/demo/api-reference" element={<ApiReferencePage />} />
+          <Route path="/demo/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </ActivePlayerProvider>
