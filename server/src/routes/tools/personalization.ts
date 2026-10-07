@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { toolsPersonalization } from '../../index.js';
+import { toolsConfigStore } from '../../index.js';
 
 const router = Router();
 
 router.post('/', (_req, res) => {
   try {
-    const parsed = JSON.parse(toolsPersonalization.payload);
+    const payload = toolsConfigStore.getById('config')?.payload || '{}';
+    const parsed = JSON.parse(payload);
     res.json(parsed);
   } catch {
     res.json({});

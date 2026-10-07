@@ -36,8 +36,11 @@ export const eventStore = new Store<AppchargeEvent>('events');
 export const logStore = new Store<ApiLogEntry>('logs');
 export const settingsStore = new Store<AppSettings>('settings');
 
-// ─── Tools personalization state ───
-export const toolsPersonalization = { payload: '{}' };
+// ─── Tools personalization state (persisted to disk) ───
+export const toolsConfigStore = new Store<{ id: string; payload: string }>('tools-config', true);
+if (!toolsConfigStore.getById('config')) {
+  toolsConfigStore.create({ id: 'config', payload: '{}' });
+}
 export const toolsEventStore = new Store<{ id: string; timestamp: string; body: Record<string, unknown> }>('tools-events');
 
 async function bootstrap() {
