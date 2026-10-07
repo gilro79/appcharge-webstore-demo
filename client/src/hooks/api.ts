@@ -102,6 +102,12 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  // Tools Personalization
+  getToolsPersonalization: () => request<any>('/tools-personalization'),
+  updateToolsPersonalization: (payload: string) =>
+    request<any>('/tools-personalization', { method: 'PUT', body: JSON.stringify({ payload }) }),
+  clearToolsEvents: () => request<any>('/tools-personalization/events', { method: 'DELETE' }),
+
   // Game Auth (Game Redirect Login)
   simulateGameAuth: (publisherPlayerId: string, initiateType: string = 'in-app', webstoreUrl?: string) =>
     request<any>('/game-auth/simulate', { method: 'POST', body: JSON.stringify({ publisherPlayerId, initiateType, webstoreUrl }) }),

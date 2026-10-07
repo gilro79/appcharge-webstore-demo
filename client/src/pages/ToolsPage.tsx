@@ -463,9 +463,148 @@ export default function ToolsPage() {
       </div>
 
       {toolTab === 'duplication' && <DuplicationTool />}
-      {toolTab === 'personalization' && (
-        <div className="text-sm text-gray-400 italic">Personalization tool coming soon.</div>
-      )}
+      {toolTab === 'personalization' && <PersonalizationTool />}
+      </div>
+    </div>
+  );
+}
+
+function PersonalizationTool() {
+  const [payload, setPayload] = useState('{}');
+  const [saved, setSaved] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [events, setEvents] = useState<{ id: string; timestamp: string; body: Record<string, unknown> }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const eventsEndRef = useRef<HTMLDivElement>(null);
+
+  async function fetchData() {
+    try {
+      const data = await api.getToolsPersonalization();
+      setPayload(data.payload);
+      setEvents(data.events || []);
+      setSaved(true);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Initial load
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Poll events every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.getToolsPersonalization();
+        setEvents(data.events || []);
+      } catch {
+        // ignore
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await api.updateToolsPersonalization(payload);
+      setSaved(true);
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleClearEvents() {
+    try {
+      await api.clearToolsEvents();
+      setEvents([]);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (loading) {
+    return <div className="text-sm text-gray-400">Loading...</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Left panel — Payload editor */}
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Personalization Payload</h3>
+          <button
+            className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={saving || saved}
+            onClick={handleSave}
+          >
+            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
+          </button>
+        </div>
+        <div className="mb-3 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+          <div className="text-xs text-gray-500 mb-0.5">Endpoint URL</div>
+          <code className="text-xs text-gray-700 select-all">{`${window.location.origin}/api/tools/personalization`}</code>
+        </div>
+        <textarea
+          className="w-full h-80 px-3 py-2 text-sm font-mono border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          value={payload}
+          onChange={(e) => { setPayload(e.target.value); setSaved(false); }}
+          placeholder="{}"
+          spellCheck={false}
+        />
+      </div>
+
+      {/* Right panel — Events log */}
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">
+            Events Log
+            <span className="ml-2 bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{events.length}</span>
+          </h3>
+          <button
+            className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={events.length === 0}
+            onClick={handleClearEvents}
+          >
+            Clear
+          </button>
+        </div>
+        <div className="mb-3 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+          <div className="text-xs text-gray-500 mb-0.5">Endpoint URL</div>
+          <code className="text-xs text-gray-700 select-all">{`${window.location.origin}/api/tools/events`}</code>
+        </div>
+        <div className="h-80 overflow-y-auto border border-gray-200 rounded-md">
+          {events.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-sm text-gray-400">
+              No events received yet
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {events.map((event) => (
+                <div key={event.id} className="px-3 py-2 hover:bg-gray-50">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      {new Date(event.timestamp).toLocaleTimeString()}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(event.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all font-mono">
+                    {JSON.stringify(event.body, null, 2)}
+                  </pre>
+                </div>
+              ))}
+              <div ref={eventsEndRef} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -25,6 +25,9 @@ import dashboardAppchargeProxyRoutes from './routes/dashboard/appcharge-proxy.js
 import gameAuthAppchargeRoutes from './routes/appcharge/game-auth.js';
 import dashboardGameAuthRoutes from './routes/dashboard/game-auth.js';
 import dashboardToolsRoutes from './routes/dashboard/tools.js';
+import toolsPersonalizationAppchargeRoutes from './routes/tools/personalization.js';
+import toolsEventsAppchargeRoutes from './routes/tools/events.js';
+import dashboardToolsPersonalizationRoutes from './routes/dashboard/tools-personalization.js';
 
 // ─── Stores (exported for route handlers) ───
 export const playerStore = new Store<Player>('players');
@@ -32,6 +35,10 @@ export const tierStore = new Store<Tier>('tiers');
 export const eventStore = new Store<AppchargeEvent>('events');
 export const logStore = new Store<ApiLogEntry>('logs');
 export const settingsStore = new Store<AppSettings>('settings');
+
+// ─── Tools personalization state ───
+export const toolsPersonalization = { payload: '{}' };
+export const toolsEventStore = new Store<{ id: string; timestamp: string; body: Record<string, unknown> }>('tools-events');
 
 async function bootstrap() {
 
@@ -68,6 +75,10 @@ async function bootstrap() {
   app.use('/api/appcharge/events', requestLogger, eventRoutes);
   app.use('/api/appcharge/game-auth', requestLogger, gameAuthAppchargeRoutes);
 
+  // Tools endpoints (Appcharge-facing, unprotected, with request logging)
+  app.use('/api/tools/personalization', requestLogger, toolsPersonalizationAppchargeRoutes);
+  app.use('/api/tools/events', requestLogger, toolsEventsAppchargeRoutes);
+
   // Dashboard internal API (protected — requires authenticated session)
   app.use('/api/dashboard/players', requireAuth, dashboardPlayerRoutes);
   app.use('/api/dashboard/personalization', requireAuth, dashboardOfferRoutes);
@@ -78,6 +89,7 @@ async function bootstrap() {
   app.use('/api/dashboard/appcharge', requireAuth, dashboardAppchargeProxyRoutes);
   app.use('/api/dashboard/game-auth', requireAuth, dashboardGameAuthRoutes);
   app.use('/api/dashboard/tools', requireAuth, express.json({ limit: '50mb' }), dashboardToolsRoutes);
+  app.use('/api/dashboard/tools-personalization', requireAuth, dashboardToolsPersonalizationRoutes);
 
   // ─── Serve React client in production ───
   if (config.nodeEnv === 'production') {
