@@ -469,6 +469,34 @@ export default function ToolsPage() {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+      title="Copy to clipboard"
+    >
+      {copied ? (
+        <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function PersonalizationTool() {
   const [payload, setPayload] = useState('{}');
   const [saved, setSaved] = useState(true);
@@ -476,7 +504,9 @@ function PersonalizationTool() {
   const [events, setEvents] = useState<{ id: string; timestamp: string; body: Record<string, unknown> }[]>([]);
   const [apiLogs, setApiLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const eventsEndRef = useRef<HTMLDivElement>(null);
+  const [rightTab, setRightTab] = useState<'events' | 'apiLogs'>('events');
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
 
   async function fetchData() {
     try {
@@ -542,144 +572,194 @@ function PersonalizationTool() {
     }
   }
 
+  function toggleEvent(id: string) {
+    setExpandedEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleLog(id: string) {
+    setExpandedLogs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   if (loading) {
     return <div className="text-sm text-gray-400">Loading...</div>;
   }
 
+  const personalizationUrl = `${window.location.origin}/api/tools/personalization`;
+  const eventsUrl = `${window.location.origin}/api/tools/events`;
+
   return (
-    <div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left panel — Payload editor */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-700">Personalization Payload</h3>
-            <button
-              className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              disabled={saving || saved}
-              onClick={handleSave}
-            >
-              {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
-            </button>
-          </div>
-          <div className="mb-3 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      {/* Left — Payload editor (main) */}
+      <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Personalization Payload</h3>
+          <button
+            className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={saving || saved}
+            onClick={handleSave}
+          >
+            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
+          </button>
+        </div>
+        <div className="mb-3 px-3 py-2 bg-gray-50 rounded-md border border-gray-200 flex items-center justify-between">
+          <div>
             <div className="text-xs text-gray-500 mb-0.5">Endpoint URL</div>
-            <code className="text-xs text-gray-700 select-all">{`${window.location.origin}/api/tools/personalization`}</code>
+            <code className="text-xs text-gray-700">{personalizationUrl}</code>
           </div>
-          <textarea
-            className="w-full h-80 px-3 py-2 text-sm font-mono border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            value={payload}
-            onChange={(e) => { setPayload(e.target.value); setSaved(false); }}
-            placeholder="{}"
-            spellCheck={false}
-          />
+          <CopyButton text={personalizationUrl} />
+        </div>
+        <textarea
+          className="w-full flex-1 min-h-[320px] px-3 py-2 text-sm font-mono border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          value={payload}
+          onChange={(e) => { setPayload(e.target.value); setSaved(false); }}
+          placeholder="{}"
+          spellCheck={false}
+        />
+      </div>
+
+      {/* Right — Tabbed pane: Events Log / API Calls */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 mb-3">
+          <button
+            className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+              rightTab === 'events'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setRightTab('events')}
+          >
+            Events
+            <span className="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{events.length}</span>
+          </button>
+          <button
+            className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+              rightTab === 'apiLogs'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setRightTab('apiLogs')}
+          >
+            API Calls
+            <span className="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{apiLogs.length}</span>
+          </button>
         </div>
 
-        {/* Right panel — Events log */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-700">
-              Events Log
-              <span className="ml-2 bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{events.length}</span>
-            </h3>
-            <button
-              className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              disabled={events.length === 0}
-              onClick={handleClearEvents}
-            >
-              Clear
-            </button>
-          </div>
-          <div className="mb-3 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
-            <div className="text-xs text-gray-500 mb-0.5">Endpoint URL</div>
-            <code className="text-xs text-gray-700 select-all">{`${window.location.origin}/api/tools/events`}</code>
-          </div>
-          <div className="h-80 overflow-y-auto border border-gray-200 rounded-md">
-            {events.length === 0 ? (
+        {/* Events tab */}
+        {rightTab === 'events' && (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded border border-gray-200 flex-1 mr-2">
+                <code className="text-xs text-gray-600 truncate">{eventsUrl}</code>
+                <CopyButton text={eventsUrl} />
+              </div>
+              <button
+                className="px-2.5 py-1 text-xs font-medium text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                disabled={events.length === 0}
+                onClick={handleClearEvents}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto border border-gray-200 rounded-md min-h-[300px]">
+              {events.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                  No events received yet
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {events.map((event) => {
+                    const isExpanded = expandedEvents.has(event.id);
+                    const eventName = (event.body as any).eventName || (event.body as any).type || 'event';
+                    return (
+                      <div key={event.id}>
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 select-none"
+                          onClick={() => toggleEvent(event.id)}
+                        >
+                          <span className={`text-gray-400 text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>&#9658;</span>
+                          <span className="text-xs font-medium text-gray-700 truncate flex-1">{eventName}</span>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0">
+                            {new Date(event.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        {isExpanded && (
+                          <div className="px-3 pb-2">
+                            <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono bg-gray-50 rounded p-2">
+                              {JSON.stringify(event.body, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* API Calls tab */}
+        {rightTab === 'apiLogs' && (
+          <div className="flex-1 overflow-y-auto border border-gray-200 rounded-md min-h-[300px]">
+            {apiLogs.length === 0 ? (
               <div className="flex items-center justify-center h-full text-sm text-gray-400">
-                No events received yet
+                No API calls logged yet
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {events.map((event) => (
-                  <div key={event.id} className="px-3 py-2 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-gray-500">
-                        {new Date(event.timestamp).toLocaleTimeString()}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(event.timestamp).toLocaleDateString()}
-                      </span>
+                {apiLogs.map((log: any) => {
+                  const isExpanded = expandedLogs.has(log.id);
+                  return (
+                    <div key={log.id}>
+                      <div
+                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 select-none"
+                        onClick={() => toggleLog(log.id)}
+                      >
+                        <span className={`text-gray-400 text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>&#9658;</span>
+                        <span className="text-xs font-semibold text-gray-700">{log.method}</span>
+                        <span className="text-xs text-gray-500 font-mono truncate flex-1">{log.path}</span>
+                        <span className={`text-xs font-medium flex-shrink-0 ${log.responseStatus < 400 ? 'text-green-600' : 'text-red-600'}`}>
+                          {log.responseStatus}
+                        </span>
+                        <span className="text-[10px] text-gray-400 flex-shrink-0">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      {isExpanded && (
+                        <div className="px-3 pb-2 space-y-2">
+                          <div>
+                            <div className="text-[10px] font-medium text-gray-500 mb-0.5">Request Body</div>
+                            <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono bg-gray-50 rounded p-2">
+                              {log.requestBody ? JSON.stringify(log.requestBody, null, 2) : '-'}
+                            </pre>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium text-gray-500 mb-0.5">Response Body</div>
+                            <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono bg-gray-50 rounded p-2">
+                              {log.responseBody ? JSON.stringify(log.responseBody, null, 2) : '-'}
+                            </pre>
+                          </div>
+                          <div className="text-[10px] text-gray-400">{log.durationMs}ms</div>
+                        </div>
+                      )}
                     </div>
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all font-mono">
-                      {JSON.stringify(event.body, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-                <div ref={eventsEndRef} />
+                  );
+                })}
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Bottom panel — Incoming API calls log */}
-      <div className="mt-6 bg-white rounded-lg border border-gray-200 p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">
-            Incoming API Calls
-            <span className="ml-2 bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{apiLogs.length}</span>
-          </h3>
-        </div>
-        <div className="max-h-72 overflow-y-auto border border-gray-200 rounded-md">
-          {apiLogs.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-gray-400">
-              No API calls logged yet
-            </div>
-          ) : (
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Time</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Method</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Path</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Status</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Duration</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Request Body</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Response Body</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {apiLogs.map((log: any) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleTimeString()}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="font-medium text-gray-700">{log.method}</span>
-                    </td>
-                    <td className="px-3 py-2 text-gray-600 font-mono">{log.path}</td>
-                    <td className="px-3 py-2">
-                      <span className={log.responseStatus < 400 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                        {log.responseStatus}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-gray-500">{log.durationMs}ms</td>
-                    <td className="px-3 py-2">
-                      <pre className="text-gray-600 font-mono whitespace-pre-wrap break-all max-w-xs">
-                        {log.requestBody ? JSON.stringify(log.requestBody, null, 2) : '-'}
-                      </pre>
-                    </td>
-                    <td className="px-3 py-2">
-                      <pre className="text-gray-600 font-mono whitespace-pre-wrap break-all max-w-xs">
-                        {log.responseBody ? JSON.stringify(log.responseBody, null, 2) : '-'}
-                      </pre>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
