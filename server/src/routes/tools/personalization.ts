@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { toolsConfigStore } from '../../index.js';
+import { getToolsPayload } from '../../state/toolsConfig.js';
 
 const router = Router();
 
 router.post('/', (_req, res) => {
   try {
-    const payload = toolsConfigStore.getById('config')?.payload || '{}';
+    const payload = getToolsPayload();
     const parsed = JSON.parse(payload);
     res.json(parsed);
   } catch {

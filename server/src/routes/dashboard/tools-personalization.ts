@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { toolsConfigStore, toolsEventStore } from '../../index.js';
+import { getToolsPayload, setToolsPayload } from '../../state/toolsConfig.js';
+import { toolsEventStore } from '../../index.js';
 
 const router = Router();
 
 // GET / — return current payload + events
 router.get('/', (_req, res) => {
-  const payload = toolsConfigStore.getById('config')?.payload || '{}';
+  const payload = getToolsPayload();
   const events = toolsEventStore.getAll()
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   res.json({ payload, events });
@@ -14,7 +15,7 @@ router.get('/', (_req, res) => {
 // PUT / — set personalization payload string
 router.put('/', (req, res) => {
   const { payload } = req.body as { payload: string };
-  toolsConfigStore.update('config', { payload });
+  setToolsPayload(payload);
   res.json({ payload });
 });
 
