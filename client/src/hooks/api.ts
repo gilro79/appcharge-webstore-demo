@@ -107,6 +107,11 @@ export const api = {
   updateToolsPersonalization: (payload: string) =>
     request<any>('/tools-personalization', { method: 'PUT', body: JSON.stringify({ payload }) }),
   clearToolsEvents: () => request<any>('/tools-personalization/events', { method: 'DELETE' }),
+  fetchToolsAppchargeData: (envType: string, publisherToken: string) =>
+    request<any>('/tools-personalization/fetch-appcharge', {
+      method: 'POST',
+      body: JSON.stringify({ envType, publisherToken }),
+    }),
 
   // Game Auth (Game Redirect Login)
   simulateGameAuth: (publisherPlayerId: string, initiateType: string = 'in-app', webstoreUrl?: string) =>

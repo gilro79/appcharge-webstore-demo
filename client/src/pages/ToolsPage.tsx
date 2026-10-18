@@ -413,9 +413,9 @@ export default function ToolsPage() {
   const [toolTab, setToolTab] = useState<'duplication' | 'personalization'>('duplication');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Standalone header */}
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+      <header className="h-14 flex-shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <Link to="/" className="text-gray-400 hover:text-gray-700 transition-colors" title="Back to Home">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -435,11 +435,11 @@ export default function ToolsPage() {
         )}
       </header>
 
-      <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Tools</h1>
+      <div className="flex-1 flex flex-col overflow-hidden p-6">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4 flex-shrink-0">Tools</h1>
 
       {/* Top-level tool tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 mb-6 flex-shrink-0">
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             toolTab === 'duplication'
@@ -462,8 +462,10 @@ export default function ToolsPage() {
         </button>
       </div>
 
+      <div className="flex-1 overflow-hidden">
       {toolTab === 'duplication' && <DuplicationTool />}
       {toolTab === 'personalization' && <PersonalizationTool />}
+      </div>
       </div>
     </div>
   );
@@ -497,17 +499,754 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+// ─── Wizard types ───
+
+interface WizardOffer {
+  publisherOfferId: string;
+  productsSequence: { index: number; products: { publisherProductId: string; quantity: number | string; priority: string }[] }[];
+  designMode: 'none' | 'offerDesignOverride' | 'dynamicOfferUi';
+  designId: string;
+  badges: string[];
+  priceDiscountEnabled: boolean;
+  priceDiscount: number;
+  priceDiscountType: string;
+  productSaleEnabled: boolean;
+  productSale: number;
+  productSaleType: string;
+}
+
+interface WizardState {
+  version: number;
+  status: string;
+  offersOrder: string;
+  sectionsOrder: string[];
+  offers: WizardOffer[];
+  balances: { publisherProductId: string; quantity: number }[];
+  storeTheme: { bgImageMobile: string; bgImageDesktop: string; bannerImage: string };
+  sessionMetadata: { key: string; value: string }[];
+  attributes: { key: string; value: string }[];
+}
+
+interface AppchargeData {
+  offers: Record<string, unknown>[];
+  products: Record<string, unknown>[];
+  offerDesigns: Record<string, unknown>[];
+  badges: Record<string, unknown>[];
+  assets: Record<string, unknown>[];
+}
+
+function defaultWizardState(): WizardState {
+  return {
+    version: 2,
+    status: 'valid',
+    offersOrder: '',
+    sectionsOrder: [],
+    offers: [],
+    balances: [],
+    storeTheme: { bgImageMobile: '', bgImageDesktop: '', bannerImage: '' },
+    sessionMetadata: [],
+    attributes: [],
+  };
+}
+
+function buildPayloadFromWizard(ws: WizardState): string {
+  const payload: Record<string, unknown> = {
+    version: ws.version,
+    status: ws.status,
+  };
+
+  if (ws.offersOrder) payload.offersOrder = ws.offersOrder;
+  if (ws.sectionsOrder.length > 0) payload.sectionsOrder = ws.sectionsOrder;
+
+  if (ws.offers.length > 0) {
+    payload.offers = ws.offers.map((o) => {
+      const offer: Record<string, unknown> = {
+        publisherOfferId: o.publisherOfferId,
+        productsSequence: o.productsSequence,
+      };
+      if (o.designMode === 'offerDesignOverride' && o.designId) {
+        offer.offerDesignOverride = { offerDesignId: o.designId };
+      } else if (o.designMode === 'dynamicOfferUi' && o.designId) {
+        offer.dynamicOfferUi = { offerDesignId: o.designId };
+      }
+      if (o.badges.length > 0) {
+        offer.badges = o.badges.map((b) => ({ publisherBadgeId: b }));
+      }
+      if (o.priceDiscountEnabled && o.priceDiscount > 0) {
+        offer.priceDiscount = { discount: o.priceDiscount, type: o.priceDiscountType };
+      }
+      if (o.productSaleEnabled && o.productSale > 0) {
+        offer.productSale = { sale: o.productSale, type: o.productSaleType };
+      }
+      return offer;
+    });
+  }
+
+  if (ws.balances.length > 0) {
+    payload.balances = ws.balances;
+  }
+
+  const hasTheme = ws.storeTheme.bgImageMobile || ws.storeTheme.bgImageDesktop || ws.storeTheme.bannerImage;
+  if (hasTheme) {
+    const theme: Record<string, string> = {};
+    if (ws.storeTheme.bgImageMobile) theme.bgImageMobile = ws.storeTheme.bgImageMobile;
+    if (ws.storeTheme.bgImageDesktop) theme.bgImageDesktop = ws.storeTheme.bgImageDesktop;
+    if (ws.storeTheme.bannerImage) theme.bannerImage = ws.storeTheme.bannerImage;
+    payload.storeTheme = theme;
+  }
+
+  if (ws.sessionMetadata.length > 0) {
+    const meta: Record<string, string> = {};
+    ws.sessionMetadata.forEach((m) => { if (m.key) meta[m.key] = m.value; });
+    if (Object.keys(meta).length > 0) payload.sessionMetadata = meta;
+  }
+
+  if (ws.attributes.length > 0) {
+    const attrs: Record<string, string> = {};
+    ws.attributes.forEach((a) => { if (a.key) attrs[a.key] = a.value; });
+    if (Object.keys(attrs).length > 0) payload.attributes = attrs;
+  }
+
+  return JSON.stringify(payload, null, 2);
+}
+
+// ─── Wizard sub-components ───
+
+function CollapsibleSection({ title, badge, expanded, onToggle, children }: {
+  title: string;
+  badge?: string;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 flex-shrink-0">
+      <div
+        className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-gray-50 select-none"
+        onClick={onToggle}
+      >
+        <span className={`text-gray-400 text-xs transition-transform ${expanded ? 'rotate-90' : ''}`}>&#9658;</span>
+        <span className="font-medium text-sm text-gray-700">{title}</span>
+        {badge && <span className="ml-auto bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{badge}</span>}
+      </div>
+      {expanded && <div className="border-t border-gray-100 px-4 py-3">{children}</div>}
+    </div>
+  );
+}
+
+function PapiEnvConfig({ envType, token, fetching, fetchError, summary, onEnvTypeChange, onTokenChange, onFetch }: {
+  envType: string;
+  token: string;
+  fetching: boolean;
+  fetchError: string;
+  summary: string;
+  onEnvTypeChange: (v: string) => void;
+  onTokenChange: (v: string) => void;
+  onFetch: () => void;
+}) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 mb-3">
+      <div className="flex items-end gap-3">
+        <div className="flex-shrink-0 w-[140px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Environment</label>
+          <select
+            value={envType}
+            onChange={(e) => onEnvTypeChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="staging">Staging</option>
+            <option value="sandbox">Sandbox</option>
+            <option value="production">Production</option>
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Publisher Token</label>
+          <input
+            type="password"
+            value={token}
+            onChange={(e) => onTokenChange(e.target.value)}
+            placeholder="Enter publisher token"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <button
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap flex-shrink-0"
+          disabled={!token || fetching}
+          onClick={onFetch}
+        >
+          {fetching ? 'Fetching...' : 'Fetch Data'}
+        </button>
+      </div>
+      {fetchError && (
+        <div className="mt-2 text-xs text-red-600">{fetchError}</div>
+      )}
+      {summary && (
+        <div className="mt-2 text-xs text-green-700">{summary}</div>
+      )}
+    </div>
+  );
+}
+
+function WizardSectionGeneral({ ws, onChange }: { ws: WizardState; onChange: (ws: WizardState) => void }) {
+  const orderPresets = ['priceLowToHigh', 'priceHighToLow'];
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-4">
+        <div className="w-32">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Version</label>
+          <input
+            type="number"
+            value={ws.version}
+            onChange={(e) => onChange({ ...ws, version: Number(e.target.value) })}
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="w-40">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+          <select
+            value={ws.status}
+            onChange={(e) => onChange({ ...ws, status: e.target.value })}
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="valid">valid</option>
+            <option value="invalid">invalid</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">Offers Order</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={ws.offersOrder}
+            onChange={(e) => onChange({ ...ws, offersOrder: e.target.value })}
+            placeholder="e.g. priceLowToHigh"
+            className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {orderPresets.map((p) => (
+            <button
+              key={p}
+              className={`px-2 py-1 text-xs rounded border transition-colors ${ws.offersOrder === p ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+              onClick={() => onChange({ ...ws, offersOrder: ws.offersOrder === p ? '' : p })}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WizardSectionOffers({ ws, onChange, appData }: { ws: WizardState; onChange: (ws: WizardState) => void; appData: AppchargeData | null }) {
+  const availableOffers = appData?.offers || [];
+  const availableProducts = appData?.products || [];
+  const availableDesigns = appData?.offerDesigns || [];
+  const availableBadges = appData?.badges || [];
+
+  function addOffer(publisherOfferId: string) {
+    const apiOffer = availableOffers.find((o: any) => o.publisherOfferId === publisherOfferId) as any;
+    const productsSequence = apiOffer?.productsSequence
+      ? (apiOffer.productsSequence as any[]).map((block: any, idx: number) => ({
+          index: block.index ?? idx,
+          products: (block.products || []).map((p: any) => ({
+            publisherProductId: p.publisherProductId || '',
+            quantity: p.quantity ?? 1,
+            priority: p.priority || 'Main',
+          })),
+        }))
+      : [{ index: 0, products: [{ publisherProductId: '', quantity: 1, priority: 'Main' }] }];
+
+    const newOffer: WizardOffer = {
+      publisherOfferId,
+      productsSequence,
+      designMode: 'none',
+      designId: '',
+      badges: [],
+      priceDiscountEnabled: false,
+      priceDiscount: 0,
+      priceDiscountType: 'percentage',
+      productSaleEnabled: false,
+      productSale: 0,
+      productSaleType: 'percentage',
+    };
+    onChange({ ...ws, offers: [...ws.offers, newOffer] });
+  }
+
+  function updateOffer(idx: number, updates: Partial<WizardOffer>) {
+    const offers = [...ws.offers];
+    offers[idx] = { ...offers[idx], ...updates };
+    onChange({ ...ws, offers });
+  }
+
+  function removeOffer(idx: number) {
+    onChange({ ...ws, offers: ws.offers.filter((_, i) => i !== idx) });
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Add Offer */}
+      <div>
+        <select
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value=""
+          onChange={(e) => { if (e.target.value) addOffer(e.target.value); }}
+        >
+          <option value="">+ Add Offer...</option>
+          {availableOffers
+            .filter((o: any) => !ws.offers.some((wo) => wo.publisherOfferId === o.publisherOfferId))
+            .map((o: any) => (
+              <option key={o.publisherOfferId} value={o.publisherOfferId}>
+                {o.publisherOfferId} ({o.type || 'unknown'})
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {/* Offer cards */}
+      {ws.offers.map((offer, oi) => (
+        <div key={oi} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">{offer.publisherOfferId}</span>
+            <button
+              className="text-xs text-red-500 hover:text-red-700"
+              onClick={() => removeOffer(oi)}
+            >
+              Remove
+            </button>
+          </div>
+
+          {/* Products per sequence block */}
+          {offer.productsSequence.map((block, bi) => (
+            <div key={bi} className="mb-2 pl-2 border-l-2 border-gray-300">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-500">Block {block.index}</span>
+                <div className="flex gap-1">
+                  {offer.productsSequence.length > 1 && (
+                    <button
+                      className="text-[10px] text-red-400 hover:text-red-600"
+                      onClick={() => {
+                        const seq = offer.productsSequence.filter((_, i) => i !== bi);
+                        updateOffer(oi, { productsSequence: seq });
+                      }}
+                    >
+                      Remove Block
+                    </button>
+                  )}
+                </div>
+              </div>
+              {block.products.map((prod, pi) => (
+                <div key={pi} className="flex items-center gap-2 mb-1">
+                  <select
+                    value={prod.publisherProductId}
+                    onChange={(e) => {
+                      const seq = [...offer.productsSequence];
+                      const prods = [...seq[bi].products];
+                      prods[pi] = { ...prods[pi], publisherProductId: e.target.value };
+                      seq[bi] = { ...seq[bi], products: prods };
+                      updateOffer(oi, { productsSequence: seq });
+                    }}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Select product...</option>
+                    {availableProducts.map((p: any) => (
+                      <option key={p.publisherProductId} value={p.publisherProductId}>
+                        {p.publisherProductId}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    value={prod.quantity}
+                    onChange={(e) => {
+                      const seq = [...offer.productsSequence];
+                      const prods = [...seq[bi].products];
+                      prods[pi] = { ...prods[pi], quantity: Number(e.target.value) };
+                      seq[bi] = { ...seq[bi], products: prods };
+                      updateOffer(oi, { productsSequence: seq });
+                    }}
+                    className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Qty"
+                    min={1}
+                  />
+                  <select
+                    value={prod.priority}
+                    onChange={(e) => {
+                      const seq = [...offer.productsSequence];
+                      const prods = [...seq[bi].products];
+                      prods[pi] = { ...prods[pi], priority: e.target.value };
+                      seq[bi] = { ...seq[bi], products: prods };
+                      updateOffer(oi, { productsSequence: seq });
+                    }}
+                    className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="Main">Main</option>
+                    <option value="Sub">Sub</option>
+                  </select>
+                  {block.products.length > 1 && (
+                    <button
+                      className="text-red-400 hover:text-red-600 text-xs"
+                      onClick={() => {
+                        const seq = [...offer.productsSequence];
+                        const prods = seq[bi].products.filter((_, i) => i !== pi);
+                        seq[bi] = { ...seq[bi], products: prods };
+                        updateOffer(oi, { productsSequence: seq });
+                      }}
+                    >
+                      x
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="text-[10px] text-blue-500 hover:text-blue-700 mt-1"
+                onClick={() => {
+                  const seq = [...offer.productsSequence];
+                  const prods = [...seq[bi].products, { publisherProductId: '', quantity: 1, priority: 'Main' }];
+                  seq[bi] = { ...seq[bi], products: prods };
+                  updateOffer(oi, { productsSequence: seq });
+                }}
+              >
+                + Add Product
+              </button>
+            </div>
+          ))}
+          <button
+            className="text-xs text-blue-500 hover:text-blue-700 mb-2"
+            onClick={() => {
+              const newIndex = offer.productsSequence.length;
+              const seq = [...offer.productsSequence, { index: newIndex, products: [{ publisherProductId: '', quantity: 1, priority: 'Main' }] }];
+              updateOffer(oi, { productsSequence: seq });
+            }}
+          >
+            + Add Sequence Block
+          </button>
+
+          {/* Offer design */}
+          <div className="flex items-center gap-2 mb-2">
+            <label className="text-xs text-gray-500 w-16">Design:</label>
+            <select
+              value={offer.designMode}
+              onChange={(e) => updateOffer(oi, { designMode: e.target.value as WizardOffer['designMode'] })}
+              className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="none">None</option>
+              <option value="offerDesignOverride">offerDesignOverride</option>
+              <option value="dynamicOfferUi">dynamicOfferUi</option>
+            </select>
+            {offer.designMode !== 'none' && (
+              <select
+                value={offer.designId}
+                onChange={(e) => updateOffer(oi, { designId: e.target.value })}
+                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Select design...</option>
+                {availableDesigns.map((d: any) => (
+                  <option key={d.externalId || d._id} value={d.externalId || d._id}>
+                    {d.name || d.externalId || d._id}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Badges */}
+          <div className="flex items-start gap-2 mb-2">
+            <label className="text-xs text-gray-500 w-16 pt-1">Badges:</label>
+            <div className="flex flex-wrap gap-1 flex-1">
+              {availableBadges.map((b: any) => {
+                const id = b.publisherBadgeId || b.name;
+                const isSelected = offer.badges.includes(id);
+                return (
+                  <button
+                    key={id}
+                    className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${isSelected ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                    onClick={() => {
+                      const badges = isSelected ? offer.badges.filter((x) => x !== id) : [...offer.badges, id];
+                      updateOffer(oi, { badges });
+                    }}
+                  >
+                    {b.name || id}
+                  </button>
+                );
+              })}
+              {availableBadges.length === 0 && <span className="text-[10px] text-gray-400">No badges available</span>}
+            </div>
+          </div>
+
+          {/* Price discount */}
+          <div className="flex items-center gap-2 mb-1">
+            <label className="flex items-center gap-1 text-xs text-gray-500">
+              <input
+                type="checkbox"
+                checked={offer.priceDiscountEnabled}
+                onChange={(e) => updateOffer(oi, { priceDiscountEnabled: e.target.checked })}
+                className="rounded"
+              />
+              Price Discount
+            </label>
+            {offer.priceDiscountEnabled && (
+              <>
+                <input
+                  type="number"
+                  value={offer.priceDiscount}
+                  onChange={(e) => updateOffer(oi, { priceDiscount: Number(e.target.value) })}
+                  className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  min={0}
+                />
+                <select
+                  value={offer.priceDiscountType}
+                  onChange={(e) => updateOffer(oi, { priceDiscountType: e.target.value })}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="percentage">percentage</option>
+                  <option value="fixed_amount">fixed_amount</option>
+                </select>
+              </>
+            )}
+          </div>
+
+          {/* Product sale */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1 text-xs text-gray-500">
+              <input
+                type="checkbox"
+                checked={offer.productSaleEnabled}
+                onChange={(e) => updateOffer(oi, { productSaleEnabled: e.target.checked })}
+                className="rounded"
+              />
+              Product Sale
+            </label>
+            {offer.productSaleEnabled && (
+              <>
+                <input
+                  type="number"
+                  value={offer.productSale}
+                  onChange={(e) => updateOffer(oi, { productSale: Number(e.target.value) })}
+                  className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  min={0}
+                />
+                <select
+                  value={offer.productSaleType}
+                  onChange={(e) => updateOffer(oi, { productSaleType: e.target.value })}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="percentage">percentage</option>
+                  <option value="multiplier">multiplier</option>
+                  <option value="fixed_amount">fixed_amount</option>
+                </select>
+              </>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WizardSectionBalances({ ws, onChange, appData }: { ws: WizardState; onChange: (ws: WizardState) => void; appData: AppchargeData | null }) {
+  const availableProducts = appData?.products || [];
+
+  return (
+    <div className="space-y-2">
+      {ws.balances.map((bal, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <select
+            value={bal.publisherProductId}
+            onChange={(e) => {
+              const balances = [...ws.balances];
+              balances[i] = { ...balances[i], publisherProductId: e.target.value };
+              onChange({ ...ws, balances });
+            }}
+            className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Select product...</option>
+            {availableProducts.map((p: any) => (
+              <option key={p.publisherProductId} value={p.publisherProductId}>
+                {p.publisherProductId}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={bal.quantity}
+            onChange={(e) => {
+              const balances = [...ws.balances];
+              balances[i] = { ...balances[i], quantity: Number(e.target.value) };
+              onChange({ ...ws, balances });
+            }}
+            className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Quantity"
+            min={0}
+          />
+          <button
+            className="text-red-400 hover:text-red-600 text-sm"
+            onClick={() => onChange({ ...ws, balances: ws.balances.filter((_, j) => j !== i) })}
+          >
+            x
+          </button>
+        </div>
+      ))}
+      <button
+        className="text-xs text-blue-500 hover:text-blue-700"
+        onClick={() => onChange({ ...ws, balances: [...ws.balances, { publisherProductId: '', quantity: 0 }] })}
+      >
+        + Add Balance
+      </button>
+    </div>
+  );
+}
+
+function WizardSectionStoreTheme({ ws, onChange, appData }: { ws: WizardState; onChange: (ws: WizardState) => void; appData: AppchargeData | null }) {
+  const availableAssets = appData?.assets || [];
+  const fields: { key: keyof WizardState['storeTheme']; label: string }[] = [
+    { key: 'bgImageMobile', label: 'BG Image Mobile' },
+    { key: 'bgImageDesktop', label: 'BG Image Desktop' },
+    { key: 'bannerImage', label: 'Banner Image' },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {fields.map(({ key, label }) => (
+        <div key={key}>
+          <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={ws.storeTheme[key]}
+              onChange={(e) => onChange({ ...ws, storeTheme: { ...ws.storeTheme, [key]: e.target.value } })}
+              placeholder="URL..."
+              className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            {availableAssets.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onChange({ ...ws, storeTheme: { ...ws.storeTheme, [key]: e.target.value } });
+                }}
+                className="w-40 px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Pick asset...</option>
+                {availableAssets.map((a: any, i: number) => (
+                  <option key={i} value={a.imageUrl || ''}>
+                    {a.name || `Asset ${i + 1}`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          {ws.storeTheme[key] && (
+            <img
+              src={ws.storeTheme[key]}
+              alt={label}
+              className="mt-1 h-12 rounded border border-gray-200 object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function KeyValueEditor({ entries, onChange, keyPlaceholder, valuePlaceholder }: {
+  entries: { key: string; value: string }[];
+  onChange: (entries: { key: string; value: string }[]) => void;
+  keyPlaceholder?: string;
+  valuePlaceholder?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {entries.map((entry, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={entry.key}
+            onChange={(e) => {
+              const updated = [...entries];
+              updated[i] = { ...updated[i], key: e.target.value };
+              onChange(updated);
+            }}
+            placeholder={keyPlaceholder || 'Key'}
+            className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            value={entry.value}
+            onChange={(e) => {
+              const updated = [...entries];
+              updated[i] = { ...updated[i], value: e.target.value };
+              onChange(updated);
+            }}
+            placeholder={valuePlaceholder || 'Value'}
+            className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            className="text-red-400 hover:text-red-600 text-sm"
+            onClick={() => onChange(entries.filter((_, j) => j !== i))}
+          >
+            x
+          </button>
+        </div>
+      ))}
+      <button
+        className="text-xs text-blue-500 hover:text-blue-700"
+        onClick={() => onChange([...entries, { key: '', value: '' }])}
+      >
+        + Add
+      </button>
+    </div>
+  );
+}
+
+// ─── PersonalizationTool (Wizard) ───
+
 function PersonalizationTool() {
+  const [wizardState, setWizardState] = useState<WizardState>(defaultWizardState);
+  const [appchargeData, setAppchargeData] = useState<AppchargeData | null>(null);
+
+  // Fetch config
+  const [fetchEnvType, setFetchEnvType] = useState('staging');
+  const [fetchToken, setFetchToken] = useState('');
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState('');
+
+  // Payload state
   const [payload, setPayload] = useState('{}');
   const [saved, setSaved] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Events & logs
   const [events, setEvents] = useState<{ id: string; timestamp: string; body: Record<string, unknown> }[]>([]);
   const [apiLogs, setApiLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rightTab, setRightTab] = useState<'events' | 'apiLogs'>('events');
+
+  // Right panel
+  const [rightTab, setRightTab] = useState<'payload' | 'events' | 'apiLogs'>('payload');
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
 
+  // Wizard sections
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['general']));
+
+  function toggleSection(key: string) {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  // Build payload whenever wizard state changes
+  useEffect(() => {
+    const built = buildPayloadFromWizard(wizardState);
+    setPayload(built);
+    setSaved(false);
+  }, [wizardState]);
+
+  // Data fetching
   async function fetchData() {
     try {
       const data = await api.getToolsPersonalization();
@@ -531,129 +1270,209 @@ function PersonalizationTool() {
     }
   }
 
-  // Initial load
-  useEffect(() => {
-    fetchData();
-    fetchLogs();
-  }, []);
-
-  // Poll events + logs every 5 seconds
+  useEffect(() => { fetchData(); fetchLogs(); }, []);
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const data = await api.getToolsPersonalization();
         setEvents(data.events || []);
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
       fetchLogs();
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  async function handleFetchAppcharge() {
+    setFetching(true);
+    setFetchError('');
+    try {
+      const data = await api.fetchToolsAppchargeData(fetchEnvType, fetchToken);
+      setAppchargeData(data);
+    } catch (err: any) {
+      setFetchError(err.message || 'Failed to fetch');
+    } finally {
+      setFetching(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
       await api.updateToolsPersonalization(payload);
       setSaved(true);
-    } catch {
-      // ignore
-    } finally {
-      setSaving(false);
-    }
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
   }
 
   async function handleClearEvents() {
-    try {
-      await api.clearToolsEvents();
-      setEvents([]);
-    } catch {
-      // ignore
-    }
+    try { await api.clearToolsEvents(); setEvents([]); } catch { /* ignore */ }
+  }
+
+  function handleResetPayload() {
+    const built = buildPayloadFromWizard(wizardState);
+    setPayload(built);
+    setSaved(false);
+  }
+
+  function handleResetAll() {
+    const ws = defaultWizardState();
+    setWizardState(ws);
+    setPayload(buildPayloadFromWizard(ws));
+    setSaved(false);
   }
 
   function toggleEvent(id: string) {
-    setExpandedEvents((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandedEvents((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
   function toggleLog(id: string) {
-    setExpandedLogs((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandedLogs((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
-  if (loading) {
-    return <div className="text-sm text-gray-400">Loading...</div>;
-  }
+  if (loading) return <div className="text-sm text-gray-400">Loading...</div>;
 
   const personalizationUrl = `${window.location.origin}/api/tools/personalization`;
   const eventsUrl = `${window.location.origin}/api/tools/events`;
 
+  const fetchSummary = appchargeData
+    ? `${appchargeData.offers.length} offers, ${appchargeData.products.length} products, ${appchargeData.offerDesigns.length} designs, ${appchargeData.badges.length} badges, ${appchargeData.assets.length} assets`
+    : '';
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-      {/* Left — Payload editor (main) */}
-      <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">Personalization Payload</h3>
-          <button
-            className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            disabled={saving || saved}
-            onClick={handleSave}
-          >
-            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
-          </button>
-        </div>
-        <div className="mb-3 px-3 py-2 bg-gray-50 rounded-md border border-gray-200 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-gray-500 mb-0.5">Endpoint URL</div>
-            <code className="text-xs text-gray-700">{personalizationUrl}</code>
-          </div>
-          <CopyButton text={personalizationUrl} />
-        </div>
-        <textarea
-          className="w-full flex-1 min-h-[320px] px-3 py-2 text-sm font-mono border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-          value={payload}
-          onChange={(e) => { setPayload(e.target.value); setSaved(false); }}
-          placeholder="{}"
-          spellCheck={false}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+      {/* Left — Wizard */}
+      <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto pr-1 pb-4" style={{ scrollbarWidth: 'thin' }}>
+        {/* Env config bar */}
+        <PapiEnvConfig
+          envType={fetchEnvType}
+          token={fetchToken}
+          fetching={fetching}
+          fetchError={fetchError}
+          summary={fetchSummary}
+          onEnvTypeChange={setFetchEnvType}
+          onTokenChange={setFetchToken}
+          onFetch={handleFetchAppcharge}
         />
+
+        {/* Wizard sections */}
+        <CollapsibleSection title="General Settings" expanded={expandedSections.has('general')} onToggle={() => toggleSection('general')}>
+          <WizardSectionGeneral ws={wizardState} onChange={setWizardState} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Offers"
+          badge={ws_offers_badge(wizardState)}
+          expanded={expandedSections.has('offers')}
+          onToggle={() => toggleSection('offers')}
+        >
+          <WizardSectionOffers ws={wizardState} onChange={setWizardState} appData={appchargeData} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Balances"
+          badge={wizardState.balances.length > 0 ? String(wizardState.balances.length) : undefined}
+          expanded={expandedSections.has('balances')}
+          onToggle={() => toggleSection('balances')}
+        >
+          <WizardSectionBalances ws={wizardState} onChange={setWizardState} appData={appchargeData} />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Store Theme" expanded={expandedSections.has('storeTheme')} onToggle={() => toggleSection('storeTheme')}>
+          <WizardSectionStoreTheme ws={wizardState} onChange={setWizardState} appData={appchargeData} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Session Metadata"
+          badge={wizardState.sessionMetadata.length > 0 ? String(wizardState.sessionMetadata.length) : undefined}
+          expanded={expandedSections.has('metadata')}
+          onToggle={() => toggleSection('metadata')}
+        >
+          <KeyValueEditor
+            entries={wizardState.sessionMetadata}
+            onChange={(entries) => setWizardState({ ...wizardState, sessionMetadata: entries })}
+            keyPlaceholder="Key"
+            valuePlaceholder="Value"
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Attributes"
+          badge={wizardState.attributes.length > 0 ? String(wizardState.attributes.length) : undefined}
+          expanded={expandedSections.has('attributes')}
+          onToggle={() => toggleSection('attributes')}
+        >
+          <KeyValueEditor
+            entries={wizardState.attributes}
+            onChange={(entries) => setWizardState({ ...wizardState, attributes: entries })}
+            keyPlaceholder="Attribute key"
+            valuePlaceholder="Attribute value"
+          />
+        </CollapsibleSection>
       </div>
 
-      {/* Right — Tabbed pane: Events Log / API Calls */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col">
+      {/* Right — Tabbed pane: Payload / Events / API Calls */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-gray-200 mb-3">
-          <button
-            className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
-              rightTab === 'events'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={() => setRightTab('events')}
-          >
-            Events
-            <span className="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{events.length}</span>
-          </button>
-          <button
-            className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
-              rightTab === 'apiLogs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={() => setRightTab('apiLogs')}
-          >
-            API Calls
-            <span className="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{apiLogs.length}</span>
-          </button>
+          {(['payload', 'events', 'apiLogs'] as const).map((tab) => {
+            const labels: Record<string, string> = { payload: 'Payload', events: 'Events', apiLogs: 'API Calls' };
+            const counts: Record<string, number> = { payload: 0, events: events.length, apiLogs: apiLogs.length };
+            return (
+              <button
+                key={tab}
+                className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+                  rightTab === tab
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setRightTab(tab)}
+              >
+                {labels[tab]}
+                {counts[tab] > 0 && (
+                  <span className="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{counts[tab]}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Payload tab */}
+        {rightTab === 'payload' && (
+          <div className="flex flex-col flex-1">
+            <div className="mb-2 px-2 py-1.5 bg-gray-50 rounded border border-gray-200 flex items-center justify-between">
+              <code className="text-xs text-gray-600 truncate">{personalizationUrl}</code>
+              <CopyButton text={personalizationUrl} />
+            </div>
+            <textarea
+              className="w-full flex-1 min-h-[300px] px-3 py-2 text-sm font-mono border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              value={payload}
+              onChange={(e) => { setPayload(e.target.value); setSaved(false); }}
+              placeholder="{}"
+              spellCheck={false}
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={saving || saved}
+                onClick={handleSave}
+              >
+                {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
+              </button>
+              <button
+                className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                onClick={handleResetPayload}
+              >
+                Reset Payload
+              </button>
+              <button
+                className="px-3 py-1.5 text-sm font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50 transition-colors"
+                onClick={handleResetAll}
+              >
+                Reset All
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Events tab */}
         {rightTab === 'events' && (
@@ -765,6 +1584,110 @@ function PersonalizationTool() {
   );
 }
 
+function ws_offers_badge(ws: WizardState): string | undefined {
+  return ws.offers.length > 0 ? `${ws.offers.length} configured` : undefined;
+}
+
+function ApiLogStatusBadge({ status }: { status: number }) {
+  const color = status >= 200 && status < 300 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+  return <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${color}`}>{status}</span>;
+}
+
+function ApiLogEntryRow({ entry }: { entry: DupApiLogEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const methodColor: Record<string, string> = {
+    get: 'text-green-400', post: 'text-yellow-400', put: 'text-blue-400', delete: 'text-red-400',
+  };
+
+  return (
+    <div className="border-b border-gray-700/50 last:border-0">
+      <div
+        className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-gray-700/50 text-xs"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className={`font-mono font-bold uppercase w-10 flex-shrink-0 ${methodColor[entry.method.toLowerCase()] || 'text-gray-400'}`}>
+          {entry.method}
+        </span>
+        <span className="text-gray-300 truncate flex-1 font-mono">
+          {entry.url.replace(/https?:\/\/[^/]+/, '')}
+        </span>
+        <ApiLogStatusBadge status={entry.status} />
+      </div>
+      {expanded && (
+        <div className="px-3 pb-2 space-y-2">
+          {entry.requestBody != null && (
+            <div>
+              <div className="text-[10px] text-gray-500 font-medium mb-0.5">Request Body:</div>
+              <pre className="text-[10px] text-gray-300 bg-gray-900 rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">
+                {JSON.stringify(entry.requestBody, null, 2)}
+              </pre>
+            </div>
+          )}
+          <div>
+            <div className="text-[10px] text-gray-500 font-medium mb-0.5">Response:</div>
+            <pre className="text-[10px] text-gray-300 bg-gray-900 rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">
+              {JSON.stringify(entry.responseBody, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DupApiLogPanel({
+  fetchLogs,
+  duplicateLogs,
+  onClearFetch,
+  onClearDuplicate,
+}: {
+  fetchLogs: DupApiLogEntry[];
+  duplicateLogs: DupApiLogEntry[];
+  onClearFetch: () => void;
+  onClearDuplicate: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'fetch' | 'duplicate'>('fetch');
+  const logs = activeTab === 'fetch' ? fetchLogs : duplicateLogs;
+
+  return (
+    <div className="bg-gray-800 rounded-lg flex flex-col h-full overflow-hidden">
+      <div className="flex items-center border-b border-gray-700 flex-shrink-0">
+        <button
+          className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+            activeTab === 'fetch' ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-gray-200'
+          }`}
+          onClick={() => setActiveTab('fetch')}
+        >
+          Fetch ({fetchLogs.length})
+        </button>
+        <button
+          className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+            activeTab === 'duplicate' ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-gray-200'
+          }`}
+          onClick={() => setActiveTab('duplicate')}
+        >
+          Duplicate ({duplicateLogs.length})
+        </button>
+        {logs.length > 0 && (
+          <button
+            className="px-2 py-1 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+            onClick={() => activeTab === 'fetch' ? onClearFetch() : onClearDuplicate()}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {logs.length === 0 ? (
+          <div className="text-xs text-gray-500 p-3">No API calls yet</div>
+        ) : (
+          logs.map((entry, i) => <ApiLogEntryRow key={i} entry={entry} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DuplicationTool() {
   const [activeTab, setActiveTab] = useState<'duplicate' | 'delete'>('duplicate');
   const [dupSubTab, setDupSubTab] = useState<'source' | 'target'>('source');
@@ -784,6 +1707,8 @@ function DuplicationTool() {
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<DupProgressEvent[]>([]);
   const [summary, setSummary] = useState<DupDuplicationSummary | null>(null);
+  const [fetchApiLogs, setFetchApiLogs] = useState<DupApiLogEntry[]>([]);
+  const [duplicateApiLogs, setDuplicateApiLogs] = useState<DupApiLogEntry[]>([]);
 
   const [stepStatuses, setStepStatuses] = useState<Record<number, StepStatus>>({
     1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending',
@@ -805,7 +1730,7 @@ function DuplicationTool() {
       res,
       (event) => setLogs((prev) => [...prev, event]),
       (s) => setSummary(s),
-      () => {},
+      (entry) => setDuplicateApiLogs((prev) => [entry, ...prev]),
       handleStepEvent
     );
   }
@@ -849,7 +1774,7 @@ function DuplicationTool() {
         res,
         () => {},
         () => {},
-        () => {},
+        (entry) => setFetchApiLogs((prev) => [entry, ...prev]),
         (eventType, data) => {
           if (eventType === 'result') fetchedData = data as DupFetchSourceResponse;
           else if (eventType === 'error') fetchErr = (data as any).error;
@@ -877,6 +1802,10 @@ function DuplicationTool() {
         target: { envType: targetEnv, publisherToken: targetToken },
         sourceData,
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
       await runSSE(res);
     } catch (err: any) {
       setLogs((prev) => [...prev, { entityType: 'product' as DupEntityType, name: 'system', status: 'failed', message: `Connection error: ${err.message}` }]);
@@ -898,6 +1827,10 @@ function DuplicationTool() {
         entityType,
         offerType,
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
       await runSSE(res);
     } catch (err: any) {
       setLogs((prev) => [...prev, { entityType, name: 'system', status: 'failed', message: `Connection error: ${err.message}` }]);
@@ -915,6 +1848,10 @@ function DuplicationTool() {
 
     try {
       const res = await api.toolsDeleteEntities({ envType: deleteEnv, publisherToken: deleteToken, entityType });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
       await runSSE(res);
     } catch (err: any) {
       setLogs((prev) => [...prev, { entityType, name: 'system', status: 'failed', message: `Connection error: ${err.message}` }]);
@@ -938,7 +1875,7 @@ function DuplicationTool() {
           res,
           (event) => setLogs((prev) => [...prev, event]),
           (s) => { totalSummary.success += s.success; totalSummary.skipped += s.skipped; totalSummary.failed += s.failed; },
-          () => {}
+          (entry) => setDuplicateApiLogs((prev) => [entry, ...prev])
         );
       } catch (err: any) {
         setLogs((prev) => [...prev, { entityType, name: 'system', status: 'failed', message: `Connection error: ${err.message}` }]);
@@ -1021,185 +1958,198 @@ function DuplicationTool() {
   const canDelete = deleteToken.length > 0 && !busy;
 
   return (
-    <>
-      {/* Duplicate / Delete tabs */}
-      <div className="flex gap-1 mb-4">
-        <button
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            activeTab === 'duplicate'
-              ? 'bg-gray-800 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-          onClick={() => setActiveTab('duplicate')}
-        >
-          Duplicate
-        </button>
-        <button
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            activeTab === 'delete'
-              ? 'bg-gray-800 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-          onClick={() => setActiveTab('delete')}
-        >
-          Delete
-        </button>
-      </div>
+    <div className="flex gap-4 h-full overflow-hidden">
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto min-w-0">
+        {/* Duplicate / Delete tabs */}
+        <div className="flex gap-1 mb-4">
+          <button
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'duplicate'
+                ? 'bg-gray-800 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            onClick={() => setActiveTab('duplicate')}
+          >
+            Duplicate
+          </button>
+          <button
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'delete'
+                ? 'bg-gray-800 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            onClick={() => setActiveTab('delete')}
+          >
+            Delete
+          </button>
+        </div>
 
-      {activeTab === 'duplicate' && (
-        <>
-          {/* Source / Target sub-tabs */}
-          <div className="flex gap-1 mb-4">
-            <button
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                dupSubTab === 'source'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-              }`}
-              onClick={() => setDupSubTab('source')}
-            >
-              Source
-            </button>
-            <button
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                dupSubTab === 'target'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-              }`}
-              onClick={() => setDupSubTab('target')}
-            >
-              Target
-            </button>
-          </div>
-
-          {dupSubTab === 'source' && (
-            <>
-              <EnvConfigPanel
-                title="Source Environment"
-                envType={sourceEnv}
-                token={sourceToken}
-                onEnvTypeChange={setSourceEnv}
-                onTokenChange={setSourceToken}
-                actionButton={
-                  <button
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                    disabled={!canFetch}
-                    onClick={handleFetch}
-                  >
-                    {fetching ? 'Fetching...' : 'Fetch Source'}
-                  </button>
-                }
-              />
-
-              {fetchError && (
-                <div className="mt-3 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
-                  {fetchError}
-                </div>
-              )}
-              {fetching && (
-                <div className="mt-3 text-sm text-gray-500">Fetching entities from source...</div>
-              )}
-
-              {sourceData && <EntityCards data={sourceData} onRemoveItems={handleRemoveSourceItems} />}
-            </>
-          )}
-
-          {dupSubTab === 'target' && (
-            <>
-              <EnvConfigPanel
-                title="Target Environment"
-                envType={targetEnv}
-                token={targetToken}
-                onEnvTypeChange={setTargetEnv}
-                onTokenChange={setTargetToken}
-              />
-
-              <DuplicationStepper
-                stepStatuses={stepStatuses}
-                busy={busy}
-                canDuplicate={canDuplicate}
-                onDuplicateAll={handleDuplicate}
-                onDuplicateType={handleDuplicateType}
-              />
-
-              <DuplicationLog logs={logs} summary={summary} />
-            </>
-          )}
-        </>
-      )}
-
-      {activeTab === 'delete' && (
-        <>
-          <EnvConfigPanel
-            title="Target Environment"
-            envType={deleteEnv}
-            token={deleteToken}
-            onEnvTypeChange={setDeleteEnv}
-            onTokenChange={setDeleteToken}
-          />
-
-          <div className="mt-4 flex flex-wrap gap-2 items-start">
-            <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('product')}>Delete Products</button>
-            <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('badge')}>Delete Badges</button>
-            <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('offer')}>Delete Offers</button>
-            <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('pricePoint')}>Delete Price Points</button>
-
-            {/* Asset delete with type selector */}
-            <div className="relative">
+        {activeTab === 'duplicate' && (
+          <>
+            {/* Source / Target sub-tabs */}
+            <div className="flex gap-1 mb-4">
               <button
-                className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                disabled={!canDelete}
-                onClick={handleOpenAssetDelete}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  dupSubTab === 'source'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+                onClick={() => setDupSubTab('source')}
               >
-                Delete Assets {assetDeleteOpen ? '\u25B4' : '\u25BE'}
+                Source
               </button>
-              {assetDeleteOpen && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px] p-3">
-                  {loadingAssetTypes ? (
-                    <div className="text-xs text-gray-400 py-2">Loading types...</div>
-                  ) : assetTypeOptions.length === 0 ? (
-                    <div className="text-xs text-gray-400 py-2">No assets found</div>
-                  ) : (
-                    <>
-                      <div className="space-y-1.5 mb-2">
-                        {assetTypeOptions.map(({ type, count }) => (
-                          <label key={type} className="flex items-center gap-2 text-xs cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={selectedAssetTypes.has(type)}
-                              onChange={() => toggleAssetType(type)}
-                              className="rounded"
-                            />
-                            <span className="text-gray-700">{type}</span>
-                            <span className="text-gray-400 ml-auto">({count})</span>
-                          </label>
-                        ))}
-                      </div>
-                      <button
-                        className="w-full px-2 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        disabled={selectedAssetTypes.size === 0}
-                        onClick={handleDeleteAssets}
-                      >
-                        Delete Selected ({selectedAssetTypes.size})
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+              <button
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  dupSubTab === 'target'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+                onClick={() => setDupSubTab('target')}
+              >
+                Target
+              </button>
             </div>
 
-            <button
-              className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              disabled={!canDelete}
-              onClick={handleDeleteAll}
-            >
-              Delete All
-            </button>
-          </div>
+            {dupSubTab === 'source' && (
+              <>
+                <EnvConfigPanel
+                  title="Source Environment"
+                  envType={sourceEnv}
+                  token={sourceToken}
+                  onEnvTypeChange={setSourceEnv}
+                  onTokenChange={setSourceToken}
+                  actionButton={
+                    <button
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                      disabled={!canFetch}
+                      onClick={handleFetch}
+                    >
+                      {fetching ? 'Fetching...' : 'Fetch Source'}
+                    </button>
+                  }
+                />
 
-          <DuplicationLog logs={logs} summary={summary} />
-        </>
-      )}
-    </>
+                {fetchError && (
+                  <div className="mt-3 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
+                    {fetchError}
+                  </div>
+                )}
+                {fetching && (
+                  <div className="mt-3 text-sm text-gray-500">Fetching entities from source...</div>
+                )}
+
+                {sourceData && <EntityCards data={sourceData} onRemoveItems={handleRemoveSourceItems} />}
+              </>
+            )}
+
+            {dupSubTab === 'target' && (
+              <>
+                <EnvConfigPanel
+                  title="Target Environment"
+                  envType={targetEnv}
+                  token={targetToken}
+                  onEnvTypeChange={setTargetEnv}
+                  onTokenChange={setTargetToken}
+                />
+
+                <DuplicationStepper
+                  stepStatuses={stepStatuses}
+                  busy={busy}
+                  canDuplicate={canDuplicate}
+                  onDuplicateAll={handleDuplicate}
+                  onDuplicateType={handleDuplicateType}
+                />
+
+                <DuplicationLog logs={logs} summary={summary} />
+              </>
+            )}
+          </>
+        )}
+
+        {activeTab === 'delete' && (
+          <>
+            <EnvConfigPanel
+              title="Target Environment"
+              envType={deleteEnv}
+              token={deleteToken}
+              onEnvTypeChange={setDeleteEnv}
+              onTokenChange={setDeleteToken}
+            />
+
+            <div className="mt-4 flex flex-wrap gap-2 items-start">
+              <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('product')}>Delete Products</button>
+              <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('badge')}>Delete Badges</button>
+              <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('offer')}>Delete Offers</button>
+              <button className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled={!canDelete} onClick={() => handleDelete('pricePoint')}>Delete Price Points</button>
+
+              {/* Asset delete with type selector */}
+              <div className="relative">
+                <button
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={!canDelete}
+                  onClick={handleOpenAssetDelete}
+                >
+                  Delete Assets {assetDeleteOpen ? '\u25B4' : '\u25BE'}
+                </button>
+                {assetDeleteOpen && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px] p-3">
+                    {loadingAssetTypes ? (
+                      <div className="text-xs text-gray-400 py-2">Loading types...</div>
+                    ) : assetTypeOptions.length === 0 ? (
+                      <div className="text-xs text-gray-400 py-2">No assets found</div>
+                    ) : (
+                      <>
+                        <div className="space-y-1.5 mb-2">
+                          {assetTypeOptions.map(({ type, count }) => (
+                            <label key={type} className="flex items-center gap-2 text-xs cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedAssetTypes.has(type)}
+                                onChange={() => toggleAssetType(type)}
+                                className="rounded"
+                              />
+                              <span className="text-gray-700">{type}</span>
+                              <span className="text-gray-400 ml-auto">({count})</span>
+                            </label>
+                          ))}
+                        </div>
+                        <button
+                          className="w-full px-2 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          disabled={selectedAssetTypes.size === 0}
+                          onClick={handleDeleteAssets}
+                        >
+                          Delete Selected ({selectedAssetTypes.size})
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={!canDelete}
+                onClick={handleDeleteAll}
+              >
+                Delete All
+              </button>
+            </div>
+
+            <DuplicationLog logs={logs} summary={summary} />
+          </>
+        )}
+      </div>
+
+      {/* API Log Panel */}
+      <div className="w-[380px] flex-shrink-0">
+        <DupApiLogPanel
+          fetchLogs={fetchApiLogs}
+          duplicateLogs={duplicateApiLogs}
+          onClearFetch={() => setFetchApiLogs([])}
+          onClearDuplicate={() => setDuplicateApiLogs([])}
+        />
+      </div>
+    </div>
   );
 }
