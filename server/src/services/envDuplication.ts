@@ -295,7 +295,7 @@ function buildOfferPayload(
     const badges = (src.badges as any[])
       .map((b: any) => {
         const inner = b.badge || b;
-        return { publisherBadgeId: String(inner.name || inner.publisherBadgeId || '') };
+        return { publisherBadgeId: String(inner.publisherBadgeId || inner.name || '') };
       })
       .filter((b) => b.publisherBadgeId);
     if (badges.length > 0) payload.badges = badges;
