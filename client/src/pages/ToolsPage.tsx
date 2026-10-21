@@ -539,7 +539,7 @@ function defaultWizardState(): WizardState {
   return {
     version: 2,
     status: 'valid',
-    offersOrder: '',
+    offersOrder: 'publisherOrder',
     sectionsOrder: [],
     offers: [],
     balances: [],
@@ -688,51 +688,24 @@ function PapiEnvConfig({ envType, token, fetching, fetchError, summary, onEnvTyp
 }
 
 function WizardSectionGeneral({ ws, onChange }: { ws: WizardState; onChange: (ws: WizardState) => void }) {
-  const orderPresets = ['priceLowToHigh', 'priceHighToLow'];
+  const orderOptions = ['publisherOrder', 'priceHighToLow', 'priceLowToHigh'] as const;
   return (
-    <div className="space-y-3">
-      <div className="flex gap-4">
-        <div className="w-32">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Version</label>
-          <input
-            type="number"
-            value={ws.version}
-            onChange={(e) => onChange({ ...ws, version: Number(e.target.value) })}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="w-40">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-          <select
-            value={ws.status}
-            onChange={(e) => onChange({ ...ws, status: e.target.value })}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    <div>
+      <label className="block text-xs font-medium text-gray-500 mb-1.5">Offers Order</label>
+      <div className="flex gap-1.5">
+        {orderOptions.map((opt) => (
+          <button
+            key={opt}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+              ws.offersOrder === opt
+                ? 'bg-blue-100 border-blue-300 text-blue-700'
+                : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+            }`}
+            onClick={() => onChange({ ...ws, offersOrder: opt })}
           >
-            <option value="valid">valid</option>
-            <option value="invalid">invalid</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1">Offers Order</label>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={ws.offersOrder}
-            onChange={(e) => onChange({ ...ws, offersOrder: e.target.value })}
-            placeholder="e.g. priceLowToHigh"
-            className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {orderPresets.map((p) => (
-            <button
-              key={p}
-              className={`px-2 py-1 text-xs rounded border transition-colors ${ws.offersOrder === p ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
-              onClick={() => onChange({ ...ws, offersOrder: ws.offersOrder === p ? '' : p })}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+            {opt}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -1304,6 +1277,16 @@ function PersonalizationTool() {
     finally { setSaving(false); }
   }
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefreshStore() {
+    setRefreshing(true);
+    try {
+      await api.refreshStore();
+    } catch { /* ignore */ }
+    finally { setRefreshing(false); }
+  }
+
   async function handleClearEvents() {
     try { await api.clearToolsEvents(); setEvents([]); } catch { /* ignore */ }
   }
@@ -1457,6 +1440,13 @@ function PersonalizationTool() {
                 onClick={handleSave}
               >
                 {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
+              </button>
+              <button
+                className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={refreshing}
+                onClick={handleRefreshStore}
+              >
+                {refreshing ? 'Refreshing...' : 'Refresh Store'}
               </button>
               <button
                 className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
