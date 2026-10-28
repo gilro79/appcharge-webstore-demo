@@ -1280,9 +1280,10 @@ function PersonalizationTool() {
   const [refreshing, setRefreshing] = useState(false);
 
   async function handleRefreshStore() {
+    if (!fetchToken) return;
     setRefreshing(true);
     try {
-      await api.refreshStore();
+      await api.toolsRefreshStore(fetchEnvType, fetchToken);
     } catch { /* ignore */ }
     finally { setRefreshing(false); }
   }
@@ -1443,7 +1444,7 @@ function PersonalizationTool() {
               </button>
               <button
                 className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                disabled={refreshing}
+                disabled={refreshing || !fetchToken}
                 onClick={handleRefreshStore}
               >
                 {refreshing ? 'Refreshing...' : 'Refresh Store'}

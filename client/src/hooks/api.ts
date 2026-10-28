@@ -112,6 +112,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ envType, publisherToken }),
     }),
+  toolsRefreshStore: (envType: string, publisherToken: string) =>
+    request<any>('/tools-personalization/refresh-store', {
+      method: 'POST',
+      body: JSON.stringify({ envType, publisherToken }),
+    }),
 
   // Game Auth (Game Redirect Login)
   simulateGameAuth: (publisherPlayerId: string, initiateType: string = 'in-app', webstoreUrl?: string) =>
