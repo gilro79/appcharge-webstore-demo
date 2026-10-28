@@ -504,8 +504,9 @@ function CopyButton({ text }: { text: string }) {
 interface WizardOffer {
   publisherOfferId: string;
   productsSequence: { index: number; products: { publisherProductId: string; quantity: number | string; priority: string }[] }[];
-  designMode: 'none' | 'offerDesignOverride' | 'dynamicOfferUi';
   designId: string;
+  titleText: string;
+  bgImageOverride: string;
   badges: string[];
   priceDiscountEnabled: boolean;
   priceDiscount: number;
@@ -564,10 +565,17 @@ function buildPayloadFromWizard(ws: WizardState): string {
         publisherOfferId: o.publisherOfferId,
         productsSequence: o.productsSequence,
       };
-      if (o.designMode === 'offerDesignOverride' && o.designId) {
-        offer.offerDesignOverride = { offerDesignId: o.designId };
-      } else if (o.designMode === 'dynamicOfferUi' && o.designId) {
-        offer.dynamicOfferUi = { offerDesignId: o.designId };
+      {
+        const override: Record<string, unknown> = {};
+        if (o.bgImageOverride) {
+          override.offerBackgroundImageOverride = o.bgImageOverride;
+        } else if (o.designId) {
+          override.offerDesignId = o.designId;
+        }
+        if (o.titleText) override.titleText = o.titleText;
+        if (Object.keys(override).length > 0) {
+          offer.offerDesignOverride = override;
+        }
       }
       if (o.badges.length > 0) {
         offer.badges = o.badges.map((b) => ({ publisherBadgeId: b }));
@@ -733,8 +741,9 @@ function WizardSectionOffers({ ws, onChange, appData }: { ws: WizardState; onCha
     const newOffer: WizardOffer = {
       publisherOfferId,
       productsSequence,
-      designMode: 'none',
       designId: '',
+      titleText: '',
+      bgImageOverride: '',
       badges: [],
       priceDiscountEnabled: false,
       priceDiscount: 0,
@@ -896,32 +905,48 @@ function WizardSectionOffers({ ws, onChange, appData }: { ws: WizardState; onCha
             + Add Sequence Block
           </button>
 
-          {/* Offer design */}
-          <div className="flex items-center gap-2 mb-2">
-            <label className="text-xs text-gray-500 w-16">Design:</label>
-            <select
-              value={offer.designMode}
-              onChange={(e) => updateOffer(oi, { designMode: e.target.value as WizardOffer['designMode'] })}
-              className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="offerDesignOverride">offerDesignOverride</option>
-              <option value="dynamicOfferUi">dynamicOfferUi</option>
-            </select>
-            {offer.designMode !== 'none' && (
-              <select
-                value={offer.designId}
-                onChange={(e) => updateOffer(oi, { designId: e.target.value })}
-                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="">Select design...</option>
-                {availableDesigns.map((d: any) => (
-                  <option key={d.externalId || d._id} value={d.externalId || d._id}>
-                    {d.name || d.externalId || d._id}
-                  </option>
-                ))}
-              </select>
-            )}
+          {/* Offer design override */}
+          <div className="mb-2">
+            <label className="text-xs text-gray-500 mb-1.5 block">offerDesignOverride</label>
+            <div className="ml-2 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-gray-400 w-20 flex-shrink-0">Design ID:</label>
+                <select
+                  value={offer.designId}
+                  onChange={(e) => updateOffer(oi, { designId: e.target.value, bgImageOverride: '' })}
+                  disabled={!!offer.bgImageOverride}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-40 disabled:bg-gray-50"
+                >
+                  <option value="">Select design...</option>
+                  {availableDesigns.map((d: any) => (
+                    <option key={d.externalId || d._id} value={d.externalId || d._id}>
+                      {d.name || d.externalId || d._id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-gray-400 w-20 flex-shrink-0">BG Image URL:</label>
+                <input
+                  type="text"
+                  value={offer.bgImageOverride}
+                  onChange={(e) => updateOffer(oi, { bgImageOverride: e.target.value, designId: '' })}
+                  placeholder="Or use background image URL instead"
+                  disabled={!!offer.designId}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-40 disabled:bg-gray-50"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-gray-400 w-20 flex-shrink-0">Title Text:</label>
+                <input
+                  type="text"
+                  value={offer.titleText}
+                  onChange={(e) => updateOffer(oi, { titleText: e.target.value })}
+                  placeholder="Optional title text"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Badges */}
