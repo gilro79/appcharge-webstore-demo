@@ -114,6 +114,13 @@ export async function syncFromAppcharge(): Promise<void> {
         return [o.publisherOfferId, price as number | undefined];
       })
     );
+    const offerSoftCurrencyMap = new Map<string, { publisherProductId: string; quantity: number } | undefined>(
+      offersData.offers.map((o) => {
+        const seq = (o as any).productsSequence;
+        const sc = Array.isArray(seq) && seq.length > 0 ? seq[0].softCurrency : undefined;
+        return [o.publisherOfferId, sc as { publisherProductId: string; quantity: number } | undefined];
+      })
+    );
     // Rolling offer sub-offer data
     const offerSubOfferMap = new Map<string, { count: number; prices: number[] }>(
       offersData.offers
@@ -149,6 +156,7 @@ export async function syncFromAppcharge(): Promise<void> {
         const offerType = offerTypeMap.get(offerId) || 'Bundle';
         const priceInUsdCents = offerPriceMap.get(offerId);
         const subOfferData = offerSubOfferMap.get(offerId);
+        const softCurrency = offerSoftCurrencyMap.get(offerId);
         if (existing) {
           // Keep existing row, but ensure all product columns exist and update offerType/price
           const products: Record<string, number> = {};
@@ -156,6 +164,13 @@ export async function syncFromAppcharge(): Promise<void> {
             products[pid] = existing.products[pid] ?? 0;
           }
           const row: TierOfferRow = { ...existing, offerType, priceInUsdCents, products };
+          if (softCurrency) {
+            row.softCurrency = existing.softCurrency
+              ? { ...softCurrency, quantity: existing.softCurrency.quantity }
+              : softCurrency;
+          } else {
+            delete row.softCurrency;
+          }
           // Rolling offer sub-offer products
           if (subOfferData) {
             row.subOfferCount = subOfferData.count;
@@ -186,6 +201,7 @@ export async function syncFromAppcharge(): Promise<void> {
           priceInUsdCents,
           products,
         };
+        if (softCurrency) row.softCurrency = softCurrency;
         if (subOfferData) {
           row.subOfferCount = subOfferData.count;
           row.subOfferPrices = subOfferData.prices;

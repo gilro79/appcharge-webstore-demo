@@ -32,6 +32,7 @@ export interface TierOfferRow {
   priceDiscount?: number;
   productSale?: number;
   productSaleType?: 'percentage' | 'multiplier' | 'fixed_amount';
+  softCurrency?: { publisherProductId: string; quantity: number };
 }
 
 export interface Tier {

@@ -53,7 +53,11 @@ router.post('/', (req, res) => {
             quantity: qty,
             priority: i === 0 ? 'Main' : 'Sub',
           }));
-        productsSequence = [{ index: 1, products }];
+        const seqEntry: Record<string, unknown> = { index: 1, products };
+        if (row.softCurrency) {
+          seqEntry.softCurrency = row.softCurrency;
+        }
+        productsSequence = [seqEntry];
       }
 
       const offer: PersonalizationOffer = {

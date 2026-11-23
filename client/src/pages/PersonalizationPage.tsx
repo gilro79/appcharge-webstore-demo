@@ -335,9 +335,11 @@ export default function PersonalizationPage() {
         if (filterEnabled === 'off' && offer.enabled) return false;
         if (filterOfferId && !offer.publisherOfferId.toLowerCase().includes(filterOfferId.toLowerCase())) return false;
         if (filterPrice) {
-          const priceStr = offer.priceInUsdCents != null
-            ? `$${(offer.priceInUsdCents / 100).toFixed(2)}`
-            : '';
+          const priceStr = offer.softCurrency
+            ? String(offer.softCurrency.quantity)
+            : offer.priceInUsdCents != null
+              ? `$${(offer.priceInUsdCents / 100).toFixed(2)}`
+              : '';
           if (!priceStr.includes(filterPrice)) return false;
         }
         return true;
@@ -350,7 +352,9 @@ export default function PersonalizationPage() {
         if (sortCol === 'type') {
           cmp = a.offer.offerType.localeCompare(b.offer.offerType);
         } else if (sortCol === 'price') {
-          cmp = (a.offer.priceInUsdCents ?? 0) - (b.offer.priceInUsdCents ?? 0);
+          const priceA = a.offer.softCurrency ? a.offer.softCurrency.quantity : (a.offer.priceInUsdCents ?? 0);
+          const priceB = b.offer.softCurrency ? b.offer.softCurrency.quantity : (b.offer.priceInUsdCents ?? 0);
+          cmp = priceA - priceB;
         }
         return sortDir === 'desc' ? -cmp : cmp;
       });
@@ -776,9 +780,11 @@ export default function PersonalizationPage() {
                           {/* Price */}
                           <td className="px-3 py-2 text-right">
                             <span className="text-sm text-gray-900">
-                              {selectedRolling?.priceInUsdCents != null
-                                ? `$${(selectedRolling.priceInUsdCents / 100).toFixed(2)}`
-                                : '—'}
+                              {selectedRolling?.softCurrency
+                                ? selectedRolling.softCurrency.quantity
+                                : selectedRolling?.priceInUsdCents != null
+                                  ? `$${(selectedRolling.priceInUsdCents / 100).toFixed(2)}`
+                                  : '—'}
                             </span>
                           </td>
                           {/* Type */}
@@ -906,9 +912,11 @@ export default function PersonalizationPage() {
                             {/* Price */}
                             <td className="px-3 py-2 text-right">
                               <span className="text-sm text-gray-900">
-                                {selectedRolling.subOfferPrices?.[blockIdx] != null
-                                  ? `$${(selectedRolling.subOfferPrices[blockIdx] / 100).toFixed(2)}`
-                                  : '—'}
+                                {selectedRolling.softCurrency
+                                  ? selectedRolling.softCurrency.quantity
+                                  : selectedRolling.subOfferPrices?.[blockIdx] != null
+                                    ? `$${(selectedRolling.subOfferPrices[blockIdx] / 100).toFixed(2)}`
+                                    : '—'}
                               </span>
                             </td>
                             {/* Type — empty */}
@@ -1040,11 +1048,23 @@ export default function PersonalizationPage() {
                         </td>
                         {/* Price */}
                         <td className="px-3 py-2 text-right">
-                          <span className="text-sm text-gray-900">
-                            {offer.priceInUsdCents != null
-                              ? `$${(offer.priceInUsdCents / 100).toFixed(2)}`
-                              : '—'}
-                          </span>
+                          {offer.softCurrency ? (
+                            <input
+                              type="number"
+                              value={offer.softCurrency.quantity}
+                              onChange={(e) => {
+                                const qty = parseInt(e.target.value, 10) || 0;
+                                updateOffer(i, { softCurrency: { ...offer.softCurrency!, quantity: qty } });
+                              }}
+                              className="w-20 px-2 py-1 text-sm text-right border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-900">
+                              {offer.priceInUsdCents != null
+                                ? `$${(offer.priceInUsdCents / 100).toFixed(2)}`
+                                : '—'}
+                            </span>
+                          )}
                         </td>
                         {/* Offer Type */}
                         <td className="px-3 py-2">
