@@ -53,17 +53,18 @@ router.post('/', (req, res) => {
             quantity: qty,
             priority: i === 0 ? 'Main' : 'Sub',
           }));
-        const seqEntry: Record<string, unknown> = { index: 1, products };
-        if (row.softCurrency) {
-          seqEntry.softCurrency = row.softCurrency;
-        }
-        productsSequence = [seqEntry];
+        productsSequence = [{ index: 1, products }];
       }
 
       const offer: PersonalizationOffer = {
         publisherOfferId: row.publisherOfferId,
         productsSequence,
       };
+
+      // Add softCurrency to first productsSequence entry if present
+      if (row.softCurrency) {
+        (offer.productsSequence[0] as any).softCurrency = row.softCurrency;
+      }
 
       // Rolling offers use dynamicOfferUi; regular offers use offerDesignOverride
       if (row.offerType === 'RollingOffer' && row.offerDesignId) {
