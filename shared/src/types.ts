@@ -39,6 +39,7 @@ export interface Tier {
   id: string;
   name: string;
   description?: string;
+  includeOffers?: boolean;
   productColumns: string[];
   offerDesigns: string[];
   offers: TierOfferRow[];

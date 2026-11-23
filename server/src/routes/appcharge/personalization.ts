@@ -88,7 +88,7 @@ router.post('/', (req, res) => {
       return offer;
     });
 
-  const response: PersonalizationResponse = {
+  const response: Record<string, unknown> = {
     version: 2,
     status: 'valid',
     sessionMetadata,
@@ -103,8 +103,12 @@ router.post('/', (req, res) => {
       if (tier.brandKit?.bannerImage) theme.bannerImage = tier.brandKit.bannerImage;
       return theme;
     })(),
-    offers,
   };
+
+  // Only include offers if the tier has includeOffers enabled (default: true)
+  if (tier.includeOffers !== false) {
+    response.offers = offers;
+  }
 
   res.json(response);
 });

@@ -650,6 +650,26 @@ export default function PersonalizationPage() {
                 <p className="text-sm text-gray-500">{tier.description}</p>
               )}
 
+              {/* Include Offers toggle */}
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tier.includeOffers !== false}
+                    onChange={(e) => {
+                      setTier({ ...tier, includeOffers: e.target.checked });
+                      setDirty(true);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+                <span className="text-sm font-medium text-gray-700">Include offers in personalization response</span>
+                {tier.includeOffers === false && (
+                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Offers object will be omitted from the response</span>
+                )}
+              </div>
+
               {/* Filters */}
               <div className="flex flex-wrap items-center gap-3">
                 <input
